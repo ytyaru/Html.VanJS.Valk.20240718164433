@@ -34,6 +34,13 @@ window.addEventListener('DOMContentLoaded', (event) => {
         const fixAry = valk.fix([1,2,3])
         fixAry.v.pop()
     })
+    a.e(TypeError, '配列を変更できません。', ()=>{
+        const fixAry = valk.fix([1,2,3])
+        console.log(fixAry.v)
+        fixAry.v[0] = 9
+        console.log(fixAry.v)
+    })
+
     for (let name of 'copyWithin,fill,pop,push,reverse,shift,sort,splice,unshift'.split(',')) {
         a.e(TypeError, '配列を変更できません。', ()=>{
             const fixAry = valk.fix([1,2,3])
