@@ -3,12 +3,12 @@ String.prototype.capitalize = function(str) { return this.charAt(0).toUpperCase(
 class _StringCase {
     constructor() {
         this.cases = {
-            'chain':    {delimiter:'-', method:'toLowerCase', target:'all'},
-            'snake':    {delimiter:'_', method:'toLowerCase', target:'all'},
-            'camel':    {delimiter:'',  method:'capitalize',  target:'word2'},
-            'pascal':   {delimiter:'',  method:'capitalize',  target:'word'},
-            'constant': {delimiter:'_', method:'toUpperCase', target:'all'},
-            'title':    {delimiter:' ', method:'capitalize',  target:'all'},
+            'chain':    {name:'chain', delimiter:'-', method:'toLowerCase', target:'all'},
+            'snake':    {name:'snake', delimiter:'_', method:'toLowerCase', target:'all'},
+            'camel':    {name:'camel', delimiter:'',  method:'capitalize',  target:'word2'},
+            'pascal':   {name:'pascal', delimiter:'',  method:'capitalize',  target:'word'},
+            'constant': {name:'constant', delimiter:'_', method:'toUpperCase', target:'all'},
+            'title':    {name:'title', delimiter:' ', method:'capitalize',  target:'all'},
         }
     }
     get Names() { return Object.keys(this.cases) }
@@ -46,8 +46,12 @@ class _StringCase {
     to(str, to) {
         const from = this.getType(str)
         //if (!from) { throw new Error(`入力strは次のいずれかのケースであるべきです。${this.Names.join(',')}`) }
-        if (!from) { return str }
+        //if (!from) { return str } // strが'a'のような1字かつ出力形式toがconstant,pascal,titleのとき大文字にならない
         if (!to) { throw new Error(`出力ケースは次のいずれかであるべきです。${this.Names.join(',')}`) }
+        if (!from) {
+            if (1===str.length && 'constant,pascal,title'.split(',').some(c=>c===to.name)) { return str.toUpperCase() }
+            return str
+        }
         if (from===to) { return str }
         return this.#join(this.#split(str, from), to)
     }

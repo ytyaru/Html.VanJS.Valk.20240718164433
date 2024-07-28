@@ -3,6 +3,7 @@ class Html {
     constructor() {
         this.parser = new DOMParser()
         this.serializer = new XMLSerializer()
+        this.t2e = new Text2Element()
     }
     // get
     get Url() { return location.href }
@@ -45,6 +46,7 @@ class Html {
         if (text) {  el.textContent = text }
         return el
     }
+    sugger(str) { return this.t2e.build(str) } // pub like
     generate(tagName, attrs, text) { return this.toString(this.create(tagName, attrs, text)) }
     toString(el) { return this.serializer.serializeToString(el).replace(/ xmlns="[^"]+"/, '') }
     toDom(str) { return this.parser.parseFromString(str, 'text/html') }
@@ -60,6 +62,46 @@ class Html {
         for (let key of el.getAttributeNames()) { attrs[key] = el.getAttribute(key) }
         return attrs
     }
+}
+class Text2Element {
+    build(text) { // pug like: elName#id.class1.class2 style="display:none;margin:0;" enabled="true" textContent
+        const parts = text.split(' ')
+        const el = document.createElement(this.#getTagName(parts[0]))
+        console.log(el)
+        this.#setId(el, parts[0])
+        this.#setClass(el, parts[0])
+        this.#setAttr(el, parts.slice(1))
+        this.#setText(el, (1<parts.length) ? parts.slice(-1)[0] : '')
+        return el
+    }
+    #getTagName(text) { // [tag]?#id.class1.class2
+        if (['#', '.'].some(c=>text.startsWith(c))) { return 'div' }
+        else if (['#', '.'].some(c=>text.includes(c))) { return text.substring(Math.min(...['#', '.'].map(c=>text.indexOf(c)))) }
+        else { return text }
+    }
+    #setId(el, text) {
+        if (!text.includes('#')) { return }
+        console.log(text.indexOf('#')+1, text.indexOf('.'))
+        el.id = text.substring(text.indexOf('#')+1, ((-1===text.indexOf('.')) ? text.length : text.indexOf('.')))
+    }
+    #setClass(el, text) {
+        if (!text.includes('.')) { return }
+        const classText = text.substring(text.indexOf('.'))
+        const classTexts = classText.split('.').filter(v=>v)
+        console.log(classTexts )
+        for (let cls of classTexts) { el.classList.add(cls) }
+    }
+    #setAttr(el, parts) { // propertyname="cssproperty:value;k:v;"  スペース禁止。含めるとバグる
+        for (let part of parts) {
+            if (-1===part.indexOf(`="`)) { continue }
+            const kv = part.split(`=`)
+            const key = kv[0]
+            if (!key.match(/[a-zA-Z0-9_]+/)) { continue }
+            const value = kv[1].replace(/^\"/, '').replace(/\"$/, '')
+            el.setAttribute(key, value)
+        }
+    }
+    #setText(el, lastPart) { el.textContent = (lastPart.includes(`="`)) ? '' : lastPart } // =" の文字列を含められない仕様
 }
 window.Html = new Html()
 })()

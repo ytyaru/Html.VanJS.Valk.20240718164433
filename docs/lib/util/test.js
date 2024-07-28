@@ -22,8 +22,8 @@ class Test {
     static assertError(e, msg, method) {
         try { method() }
         catch(err) {
-            if (!(err instanceof e)) { return new AssertErrorResult([false, 'エラーの型が違う']) }
-            if (!this._assertErrorMessage(msg, err.message)) { return new AssertErrorResult([false, 'エラーメッセージが違う']) }
+            if (!(err instanceof e)) { return new AssertErrorResult([false, 'エラーの型が違う', `${err}`]) }
+            if (!this._assertErrorMessage(msg, err.message)) { return new AssertErrorResult([false, 'エラーメッセージが違う', err.message]) }
             return new AssertErrorResult([true])
         }
         return new AssertErrorResult([false, 'エラーになるべき所でエラーにならなかった'])

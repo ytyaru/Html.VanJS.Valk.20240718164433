@@ -95,7 +95,8 @@ class Type {
     isNums(v) { return Array.isArray(v) && v.every(x=>this.isNumber(x)) }
     isInts(v) { return Array.isArray(v) && v.every(x=>this.isInteger(x)) }
     isBools(v) { return Array.isArray(v) && v.every(x=>this.isBoolean(x)) }
-    isEls(v) { return Array.isArray(v) && v.every(x=>Type.Element(x)) }
+    //isEls(v) { return Array.isArray(v) && v.every(x=>Type.Element(x)) }
+    isEls(v) { return Array.isArray(v) && v.every(x=>this.isElement(x)) }
     isArys(v) { return Array.isArray(v) && v.every(x=>this.isArray(x)) }
     isObjs(v) { return Array.isArray(v) && v.every(x=>this.isObject(x)) }
     isFns(v) { return Array.isArray(v) && v.every(x=>this.isFunction(x)) }
@@ -106,9 +107,31 @@ class Type {
     isFs(v) { return Array.isArray(v) && v.every(x=>this.isFloat(x)) }
     isDs(v) { return Array.isArray(v) && v.every(x=>this.isDate(x)) }
     isBs(v) { return Array.isArray(v) && v.every(x=>this.isBoolean(x)) }
-    isEs(v) { return Array.isArray(v) && v.every(x=>Type.Element(x)) }
+    //isEs(v) { return Array.isArray(v) && v.every(x=>Type.Element(x)) }
+    isEs(v) { return Array.isArray(v) && v.every(x=>this.isElement(x)) }
     isAs(v) { return Array.isArray(v) && v.every(x=>this.isArray(x)) }
     isOs(v) { return Array.isArray(v) && v.every(x=>this.isObject(x)) }
+
+    to(type, value) { // boxing  value:型変換したい値, type:型名(typeof)
+        switch(type.toLowerCase()) {
+            case 'undefined': return undefined
+            case 'null': return null
+            case 'object': return {}
+            case 'array': return []
+            case 'boolean': return ((value) ? (['true','1'].some(v=>v===value.toString().toLowerCase())) : false)
+            case 'number': return Number(value)
+            case 'integer': return parseInt(value)
+            case 'float': return parseFloat(value)
+            case 'string': return String(value)
+            case 'bigint': return BigInt(value)
+            case 'symbol': return Symbol(value)
+            case 'function': return new Function(value)
+            case 'class': return Function(`return (${value})`)() // value: Class名（new ClassName()） 未定義エラーになる…
+            default: throw new Error('typeは次のいずれかのみ有効です:undefined,null,object,array,boolean,number,integer,float,string,bigint,symbol,function,class')
+//            default: return Function('return (' + classname + ')')()
+        }
+    }
+
 }
 window.Type = new Type()
 String.prototype.capitalize = function(str) { return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase() }
