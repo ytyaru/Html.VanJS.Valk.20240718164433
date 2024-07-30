@@ -16,13 +16,31 @@ window.addEventListener('DOMContentLoaded', (event) => {
     })
     a.e(valk.errors.FixError, 'Assignment to fix variable.', ()=>{
         const zero = valk.fix(0)
-        zero.v = 1
+        zero.x = 1 // 存在しないプロパティ x に代入しようとした
+    })
+    a.e(valk.errors.FixError, 'Assignment to fix variable.', ()=>{
+        const zero = valk.fix(0)
+        zero.v = 1 // 存在するプロパティ v に代入しようとした
+    })
+    a.e(ReferenceError, `Property does not exist: x`, ()=>{
+        const zero = valk.fix(0)
+        return 0===zero.x // 存在しないプロパティ v を参照した
     })
     a.t(()=>{
         const zero = valk.fix(0)
-        return 0===zero.v
+        return 0===zero.v // 存在するプロパティ v を参照した
     })
     a.t(Array.isArray(valk.fix([1,2,3])))
+
+    a.t(()=>{
+        const fixAry = valk.fix([1,2,3])
+        return 'Proxy(valk.FixArray)'===fixAry.__type
+    })
+    a.t(()=>{
+        const fixAry = new valk.types.FixedArray([1,2,3])
+        //return 'Proxy(valk.FixArray)'===fixAry.__type
+        return fixAry instanceof valk.types.FixedArray
+    })
     a.t(()=>{
         const fixAry = valk.fix([1,2,3])
         console.log(fixAry)

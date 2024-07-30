@@ -2,7 +2,28 @@
 class FixError extends Error { constructor(msg=`Assignment to fix variable.`) { super(msg); this.name='FixError' } }
 class CounterError extends Error { constructor(msg=`Assignment to counter variable.`) { super(msg); this.name='CounterError' } }
 const valk = {
-    //fix:(v)=>FixValue.get(v),
+    fix:(v)=>FixValue.get(v),
+    /*
+    fix:(v)=>{
+        const obj = FixValue.get(v)
+        const pxy = new Proxy(obj, {
+            set(target, key, value, receiver) { throw new FixError() },
+            //get(target, key, receiver) { return Reflect.get(obj, key) },
+            get(target, key, receiver) {
+                if ('__type'===key) { return `Proxy(valk.FixValue)` }
+                console.log(target, obj, key, receiver)
+                return Reflect.get(target, key)
+//                return Reflect.get(obj, key)
+                //return Reflect.get(obj, key)
+                //return Reflect.get(obj, key, receiver)
+                //return Reflect.get(obj, key, obj)
+            },
+        })
+//        pxy.__type = `Proxy(valk.fix())`
+        return pxy
+    },
+    */
+    /*
     fix:(v)=>{
         const obj = FixValue.get(v)
         const pxy = new Proxy(obj, {
@@ -20,7 +41,6 @@ const valk = {
 //        pxy.__type = `Proxy(valk.fix())`
         return pxy
     },
-    /*
     */
     count:(v, options)=>{
         if (!(Number(n) === n && n % 1 === 0)) { v = 0 }
@@ -32,7 +52,8 @@ const valk = {
 }
 class FixValue {
     static get(v) {
-        if (Array.isArray(v)) { return FixedArray.of(...v) }
+//        if (Array.isArray(v)) { return FixedArray.of(...v) }
+        if (Array.isArray(v)) { return this._getFixedArray(v) }
         if (v instanceof Set) { return new FixedSet(v) }
         if (v instanceof Map) { return new FixedMap(v) }
         if ('Object'===v.constructor.name) { return new FixedMap(v) }
@@ -41,6 +62,20 @@ class FixValue {
 //        if (v instanceof WeakSet) { return new FixedWeakSet(v) }
 //        if (v instanceof WeakMap) { return new FixedWeakMap(v) }
 //        return {v:v}
+    }
+    static _getFixedArray(v) {
+//        return FixedArray.of(...v)
+        return new Proxy(FixedArray.of(...v), {
+            set(target, key, value, receiver) { throw new FixError() },
+            //get(target, key, receiver) { return Reflect.get(target, key) },
+            get(target, key, receiver) {
+                if ('__type'===key) { return `Proxy(valk.FixArray)` }
+                console.log(target, key, receiver)
+                return Reflect.get(target, key)
+            },
+        })
+        /*
+        */
     }
     static _getProxy(obj) {
         return new Proxy(obj, {

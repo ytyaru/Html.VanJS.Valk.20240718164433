@@ -2,26 +2,7 @@
 class FixError extends Error { constructor(msg=`Assignment to fix variable.`) { super(msg); this.name='FixError' } }
 class CounterError extends Error { constructor(msg=`Assignment to counter variable.`) { super(msg); this.name='CounterError' } }
 const valk = {
-    //fix:(v)=>FixValue.get(v),
-    fix:(v)=>{
-        const obj = FixValue.get(v)
-        const pxy = new Proxy(obj, {
-            set(target, key, value, receiver) { throw new FixError() },
-            //get(target, key, receiver) { return Reflect.get(obj, key) },
-            get(target, key, receiver) {
-                if ('__type'===key) { return `Proxy(valk.FixValue)` }
-                console.log(obj, key, receiver)
-                return Reflect.get(obj, key)
-                //return Reflect.get(obj, key)
-                //return Reflect.get(obj, key, receiver)
-                //return Reflect.get(obj, key, obj)
-            },
-        })
-//        pxy.__type = `Proxy(valk.fix())`
-        return pxy
-    },
-    /*
-    */
+    fix:(v)=>FixValue.get(v),
     count:(v, options)=>{
         if (!(Number(n) === n && n % 1 === 0)) { v = 0 }
         if ('Object'!==options.constructor.name) { options = {step:(tick)=>tick++} }
@@ -32,7 +13,9 @@ const valk = {
 }
 class FixValue {
     static get(v) {
-        if (Array.isArray(v)) { return FixedArray.of(...v) }
+//        if (Array.isArray(v)) { return FixedArray.of(...v) }
+//        if (Array.isArray(v)) { return this._getFixedArray(v) }
+        if (Array.isArray(v)) { return new FixedArray(v) }
         if (v instanceof Set) { return new FixedSet(v) }
         if (v instanceof Map) { return new FixedMap(v) }
         if ('Object'===v.constructor.name) { return new FixedMap(v) }
@@ -42,14 +25,31 @@ class FixValue {
 //        if (v instanceof WeakMap) { return new FixedWeakMap(v) }
 //        return {v:v}
     }
+    static _getFixedArray(v) {
+//        return FixedArray.of(...v)
+        return new Proxy(FixedArray.of(...v), {
+            set(target, key, value, receiver) { throw new FixError() },
+            //get(target, key, receiver) { return Reflect.get(target, key) },
+            get(target, key, receiver) {
+                if ('__type'===key) { return `Proxy(valk.FixedArray)` }
+                //console.log(target, key, receiver)
+                return Reflect.get(target, key)
+            },
+        })
+        /*
+        */
+    }
     static _getProxy(obj) {
         return new Proxy(obj, {
             set(target, key, value, receiver) { throw new FixError() },
-            //get(target, key, receiver) { return Reflect.get(obj, key) },
             get(target, key, receiver) {
-                if ('__type'===key) { return `Proxy(valk.FixValue)` }
-                return Reflect.get(obj, key)
+                if ('__type'===key) { return `Proxy(valk.FixedValue)` }
+                if (key in target) { return Reflect.get(target, key) }
+                else { throw new ReferenceError(`Property does not exist: ${key}`) }
+                //if (Object.hasOwnProperty(target, key)) { return Reflect.get(obj, key) }
+//                return Reflect.get(obj, key)
             },
+            //get(target, key, receiver) { return Reflect.get(obj, key) },
         })
     }
 }
@@ -78,8 +78,26 @@ class ChangedArray extends ChangenableContainer(Array) { // Arrayの破壊的メ
     }
 }
 class FixedArray extends ChangedArray {
-    constructor(...args) { super(...args); this._onChanged = ()=>{throw new FixError()}; }
+//    constructor(...args) { super(...args); this._onChanged = ()=>{throw new FixError()}; }
 //    static get [Symbol.species]() { return Array; }
+    constructor(...args) {
+        super(...args)
+        this._onChanged = ()=>{throw new FixError()}
+        return this._getProxy(...args)
+    }
+    _getProxy(...args) {
+        return new Proxy(...args, {
+        //return new Proxy(this, {
+        //return new Proxy(FixedArray.of(...args), {
+            set(target, key, value, receiver) { throw new FixError() },
+            //get(target, key, receiver) { return Reflect.get(target, key) },
+            get(target, key, receiver) {
+                if ('__type'===key) { return `Proxy(valk.FixedArray)` }
+                //console.log(target, key, receiver)
+                return Reflect.get(target, key)
+            },
+        })
+    }
 }
 class ChangedSet extends ChangenableContainer(Set) {
     constructor(...args) {
@@ -88,8 +106,42 @@ class ChangedSet extends ChangenableContainer(Set) {
     }
 }
 class FixedSet extends ChangedSet {
-    constructor(...args) { super(...args); this._onChanged = ()=>{throw new FixError()}; }
+//    constructor(...args) { super(...args); this._onChanged = ()=>{throw new FixError()}; }
 //    static get [Symbol.species]() { return Array; }
+    constructor(...args) {
+        super(...args)
+        this._onChanged = ()=>{throw new FixError()}
+        return this._getProxy(...args)
+    }
+    _getProxy(...args) {
+        return new Proxy(...args, {
+            set(target, key, value, receiver) { throw new FixError() },
+            get(target, key, receiver) {
+                if ('__type'===key) { return `Proxy(valk.FixedSet)` }
+                if (key in target) {
+                    if (Type.hasGetter(target, key)) { return Reflect.get(target, key) }
+//                    else { console.log(key); return target[key] }
+                    else if ('function'===typeof target[key]) { return target[key].bind(target) }
+                }
+                //if (key in target) { return Reflect.get(target, key) }
+                //if (key in target) { return Reflect.get(this, key) }
+                //if (key in target) { return Reflect.apply(target, key) }
+                //if (key in target) { return Reflect.apply(target, key) }
+                //if (key in target) { return target[key] }
+                //if (key in target) { return this[key] }
+                else { throw new ReferenceError(`Property does not exist: ${key}`) }
+                //console.log(target, key, receiver)
+                //return Reflect.get(target, key)
+            },
+            apply(target, thisArg, argumentsList) {
+                console.log(target, thisArg, argumentsList)
+                return target(...argumentsList)
+            },
+            //get(target, key, receiver) { return Reflect.get(target, key) },
+        })
+    }
+    /*
+    */
 }
 class ChangedMap extends ChangenableContainer(Map) {
     constructor(...args) {
