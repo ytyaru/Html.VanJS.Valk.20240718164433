@@ -15,8 +15,9 @@ class FixValue {
     static get(v) {
         if (Array.isArray(v)) { return new FixedArray(v) }
         if (v instanceof Set) { return new FixedSet(v) }
-        if (v instanceof Map) { return new FixedMap(v) }
-        if ('Object'===v.constructor.name) { return new FixedMap(v) }
+        if (v instanceof Map || 'Object'===v.constructor.name) { return new FixedMap(v) }
+        //if (v instanceof Map) { return new FixedMap(v) }
+        //if ('Object'===v.constructor.name) { return new FixedMap(Object.entries(v)) }
         return this._getProxy({v:v})
     }
     static _getProxy(obj) {
@@ -68,6 +69,12 @@ class FixedArray extends ChangedArray {
                 return Reflect.get(target, key)
 //                if (key in target) { return Reflect.get(target, key) }
 //                else { throw new ReferenceError(`Property does not exist: ${key}`) }
+                    // 例外が発生すべき所で発生せず
+//                if (key in target) {
+//                    if (Type.hasGetter(target, key)) { return Reflect.get(target, key) }
+//                    else if ('function'===typeof target[key]) { return target[key].bind(target) }
+//                }
+//                else { throw new ReferenceError(`Property does not exist: ${key}`) }
             },
         })
     }
@@ -85,20 +92,25 @@ class FixedSet extends ChangedSet {
         return this._getProxy(...args)
     }
     _getProxy(...args) {
-        return new Proxy(...args, {
+        // 代入処理を一律エラーにするにはProxyを使うしかない。
+        //const set = new Set(0===args.length ? [] : (args[0] instanceof Set ? [...args[0].values()] : (Array.isArray(args[0]) ? args[0] : [])))
+        const v = new Set(0===args.length ? [] : (args[0] instanceof Set ? [...args[0].values()] : args[0]))
+        return new Proxy(v, {
+        //return new Proxy(...args, {
             set(target, key, value, receiver) { throw new FixError() },
             get(target, key, receiver) {
                 if ('__type'===key) { return `Proxy(valk.FixedSet)` }
+                if ('add,clear,delete'.split(',').some(n=>n===key)) { throw new FixError() }
                 if (key in target) {
                     if (Type.hasGetter(target, key)) { return Reflect.get(target, key) }
                     else if ('function'===typeof target[key]) { return target[key].bind(target) }
                 }
                 else { throw new ReferenceError(`Property does not exist: ${key}`) }
             },
-            apply(target, thisArg, argumentsList) {
-                console.log(target, thisArg, argumentsList)
-                return target(...argumentsList)
-            },
+//            apply(target, thisArg, argumentsList) {
+//                console.log(target, thisArg, argumentsList)
+//                return target(...argumentsList)
+//            },
         })
     }
 }
@@ -109,17 +121,47 @@ class ChangedMap extends ChangenableContainer(Map) {
         //this._setupOnChanged('add,clear,delete,set'.split(','))
     }
 }
-class FixedMap extends ChangedMap {
+class FixedMap {
+//class FixedMap extends ChangedMap {
     constructor(...args) {
+        //super(...args)
+        /*
         if (1===args.length && 'Object'===args[0].constructor.name) { super([...Object.entries(args[0])]) }
         else if (1===args.length && args[0] instanceof Map) { super([...args[0].entries()]) }
         else { super(...args) }
 //        if (1===args.length && ('Object'===args[0].constructor.name || args[0] instanceof Map)) { console.log('*********', );super(Array.from(Object.entries(args[0]))) } else { super(...args) }
 //        (1===args.length && 'Object'===args[0].constructor.name) ? super(Array.from(Object.entries(args[0]))) : super(...args);
         this._onChanged = ()=>{throw new FixError()};
+        return this._getProxy(...args)
+        */
+        return this._getProxy(...args)
     }
 //    constructor(...args) { super(...args); this._onChanged = ()=>{throw new FixError()}; }
 //    static get [Symbol.species]() { return Array; }
+    _getProxy(...args) {
+        //const map = new Map(0===args.length ? [] : (Type.isItr(args[0]) ? args[0] : ('Object'===args[0].constructor.name ? [...Object.entries(args[0])] : [])))
+        const map = new Map(0===args.length ? [] : (Type.isItr(args[0]) ? args[0] : ('Object'===args[0].constructor.name ? [...Object.entries(args[0])] : args[0])))
+//        Type.isItr()
+//        if ('Object'===v.constructor.name) { return new FixedMap(Object.entries(v)) }
+        // 代入処理を一律エラーにするにはProxyを使うしかない。
+        return new Proxy(map, {
+        //return new Proxy(...args, {
+            set(target, key, value, receiver) { throw new FixError() },
+            get(target, key, receiver) {
+                if ('__type'===key) { return `Proxy(valk.FixedMap)` }
+                if ('clear,delete,set'.split(',').some(n=>n===key)) { throw new FixError() }
+                if (key in target) {
+                    if (Type.hasGetter(target, key)) { return Reflect.get(target, key) }
+                    else if ('function'===typeof target[key]) { return target[key].bind(target) }
+                }
+                else { throw new ReferenceError(`Property does not exist: ${key}`) }
+            },
+//            apply(target, thisArg, argumentsList) {
+//                console.log(target, thisArg, argumentsList)
+//                return target(...argumentsList)
+//            },
+        })
+    }
 }
 
 /*

@@ -122,6 +122,10 @@ window.addEventListener('DOMContentLoaded', (event) => {
         return 3===s.size
     })
     a.t(()=>{
+        const s = valk.fix(new Set([1]))
+        return s.has(1)
+    })
+    a.t(()=>{
         const s = valk.fix(new Set([1,2,3]))
         console.assert(s instanceof Set)
         return 3===s.size && [1,2,3].every(v=>s.has(v))
@@ -142,6 +146,88 @@ window.addEventListener('DOMContentLoaded', (event) => {
         }
         return r.every(v=>v)
     })
+    a.e(valk.errors.FixError, 'Assignment to fix variable.', ()=>{
+        const s = valk.fix(new Set())
+        s.add(1)
+    })
+    a.e(valk.errors.FixError, 'Assignment to fix variable.', ()=>{
+        const s = valk.fix(new Set([0]))
+        s.clear(1)
+    })
+    a.e(valk.errors.FixError, 'Assignment to fix variable.', ()=>{
+        const s = valk.fix(new Set([0]))
+        s.delete(2)
+    })
+    for (let name of 'add,clear,delete'.split(',')) {
+        a.e(valk.errors.FixError, 'Assignment to fix variable.', ()=>{
+            const fixSet = valk.fix(new Set([1,2,3]))
+            fixSet[name]()
+        })
+    }
+
+    // FixedMap
+    a.t(valk.fix(new Map([['k', 1], ['l', 2]])) instanceof Map)
+    a.t(valk.fix({k:1, l:2}) instanceof Map)
+    a.t('Proxy(valk.FixedMap)'===valk.fix(new Map([['k', 1], ['l', 2]])).__type)
+    a.t('Proxy(valk.FixedMap)'===valk.fix({k:1, l:2}).__type)
+    console.log(valk.fix({k:1, l:2}).constructor)
+    console.log(valk.fix({k:1, l:2}).constructor.name)
+    a.e(ReferenceError, `Property does not exist: k`, ()=>{
+        const m = valk.fix({k:1})
+        m['k']
+    })
+    a.e(valk.errors.FixError, 'Assignment to fix variable.', ()=>{
+        const s = valk.fix({k:1})
+        s['k'] = 9
+    })
+    a.t(()=>{
+        const m = valk.fix({k:1})
+        return 1===m.size
+    })
+    a.t(()=>{
+        const m = valk.fix({k:1})
+        return m.has('k')
+    })
+    a.t(()=>{
+        const m = valk.fix({k:1})
+        return 1===m.get('k')
+    })
+    a.t(()=>{
+        const m = valk.fix({k:1, l:2})
+        console.assert(m instanceof Map)
+        console.log(m)
+        return 2===m.size && [['k',1],['l',2]].every(([k,v])=>m.has(k) && v===m.get(k))
+    })
+    a.t(()=>{
+        const m = valk.fix({k:1, l:2})
+        const ks = [...m.keys()]
+        const vs = [...m.values()]
+        const es= [...m.entries()]
+        return [ks,vs,es].every(a=>2===a.length) 
+            && 'k'===ks[0] && 'l'===ks[1] 
+            && 1===vs[0] && 2===vs[1]
+            && 'k'===es[0][0] && 1===es[0][1] 
+            && 'l'===es[1][0] && 2===es[1][1]
+    })
+    a.e(valk.errors.FixError, 'Assignment to fix variable.', ()=>{
+        const s = valk.fix({k:1})
+        s.set('l',2)
+    })
+    a.e(valk.errors.FixError, 'Assignment to fix variable.', ()=>{
+        const s = valk.fix({k:1})
+        s.clear()
+    })
+    a.e(valk.errors.FixError, 'Assignment to fix variable.', ()=>{
+        const s = valk.fix({k:1})
+        s.delete('k')
+    })
+    for (let name of 'clear,delete,set'.split(',')) {
+        a.e(valk.errors.FixError, 'Assignment to fix variable.', ()=>{
+            const fixMap = valk.fix({k:1})
+            fixMap[name]()
+        })
+    }
+
 
     a.fin()
 });
