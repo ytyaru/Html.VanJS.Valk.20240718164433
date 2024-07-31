@@ -475,3 +475,65 @@ valk.some(v, candidates)
 valk.range(v, min, max)
 ```
 
+
+
+
+
+
+
+
+
+
+## valk.count()
+
+```javascript
+valk.count()       // 0から無限にカウントアップ
+valk.count(100)    // 0から100までカウントアップ
+valk.count(-100)   // 100から0までカウントダウン
+valk.count(0, 100) // 0から100までカウントアップ
+valk.count(100, 0) // 100から0までカウントダウン
+valk.count({onStep:(v)=>v++})    // 0から無限にカウントアップ。1ずつ加算
+valk.count({onStep:(v)=>v--})    // 0から無限にカウントダウン。1ずつ減算
+valk.count({onStep:(v)=>v+2})    // 0から無限にカウントアップ。2ずつ加算
+valk.count({onComplete:(v)=>{}})    // 完了処理。完了したら実行する。
+valk.count({type:valk.count.onCompletedTypes.Error/Keep/Clear/Over})
+```
+
+* 整数値が一つのみ（0を基準として正数・負数によりカウントアップかダウンを決める）
+* 正数が二つ（基準値を0でない値にしたいときに使用する。初期値、最終値の順に指定する。その大小によってアップorダウンを決める）
+* `onStep`: `count()`時に実行する。普通`(v)=>v++`か`(v)=>v--`のいずれか。それ以外の場合は`onStep`を実装することで自由に決定できる
+* `onComplete`: 完了時に実行する。戻り値が真ならカウント値をクリアする。isCompletedが真なら`count()`時に例外発生する。
+
+```javascript
+const c = valk.count(3)
+c.count()
+c.count()
+c.count()
+c.count() // 例外発生: すでにカウント上限に達しました。
+
+c.isCompleted ? c.count() : undefined
+```
+
+　完了後の処理をどうするか。完了後のコールバック関数を呼び出すのは確定としても、次の4パターンが考えられる。
+
+* `count()`を呼び出すと例外発生する（既に完了済みエラー）
+* `count()`を呼び出すと無視する（カウント変化せず例外も出さないが呼び出しは許可する）
+* `count()`を呼び出すと加算する（完了直後にカウント値が初期化されている）
+* `count()`を呼び出すと加算する（上限値をオーバーして尚カウントし続ける）
+
+完了後パターン|概要
+--------------|----
+`onCompletedError`|`count()`を呼び出すと例外発生する（既に完了済みエラー）
+`onCompletedKeep`|`count()`を呼び出すと無視する（カウント変化せず例外も出さないが呼び出しは許可する）
+`onCompletedClear`|`count()`を呼び出すと加算する（完了直後にカウント値が初期化されている）
+`onCompletedOver`|`count()`を呼び出すと加算する（上限値をオーバーして尚カウントし続ける。デフォルト）
+
+```javascript
+const c = valk.count({type:valk.count.onCompletedTypes.Error/Keep/Clear/Over})
+c.v // カウント値
+c.tick // count()呼出回数
+c.isCompleted // 完了是非
+c.count() // カウントアップorダウン（next()と同義だがイテレータにはしないためcountという名前にする）
+c.gen()   // ジェネレータ関数（yieldで返すのでfor文で受け止めること。たとえ`onCompletedOver`でも終了する（無限ループ回避））
+```
+
