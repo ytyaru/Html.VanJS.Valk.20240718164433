@@ -527,6 +527,19 @@ c.isCompleted ? c.count() : undefined
 `onCompletedKeep`|`count()`を呼び出すと無視する（カウント変化せず例外も出さないが呼び出しは許可する）
 `onCompletedClear`|`count()`を呼び出すと加算する（完了直後にカウント値が初期化されている）
 `onCompletedOver`|`count()`を呼び出すと加算する（上限値をオーバーして尚カウントし続ける。デフォルト）
+`onCompletedEvery`|`count()`を呼び出すと加算する（上限値をオーバーして尚カウントし続ける。デフォルト）
+
+　`complete()`コールバック関数は初回完了直後に実行される。ただ、一度完了した後にどうするか。いくつかのパターンがある。
+
+完了後パターン|`count()`|`complete()`|ユースケース
+--------------|---------|------------|------------
+`onCompletedError`|例外発生|例外発生|一度完了したら二度とカウントさせない（エラー発生する）
+`onCompletedKeep`|無視|無視|一度完了したら機能停止（エラー発生しない）
+`onCompletedOver`|カウントする|無視|一度完了したら二度と`complete()`しないが、カウントは可能（上限値無視）
+`onCompletedEvery`|無視|実行する|一度完了したら以降カウントする度に`complete()`する（カウントは無視）
+`onCompletedClear`|カウントする|カウントを初期化する|完了する度にカウントを初期化する（無限ループ）
+
+
 
 ```javascript
 const c = valk.count({type:valk.count.onCompletedTypes.Error/Keep/Clear/Over})
@@ -535,5 +548,35 @@ c.tick // count()呼出回数
 c.isCompleted // 完了是非
 c.count() // カウントアップorダウン（next()と同義だがイテレータにはしないためcountという名前にする）
 c.gen()   // ジェネレータ関数（yieldで返すのでfor文で受け止めること。たとえ`onCompletedOver`でも終了する（無限ループ回避））
+```
+
+```javascript
+const c = valk.count() // 永久にカウントアップする Over 永遠に onCompleted しない
+c.count()
+```
+```javascript
+const c = valk.count(10) // 0から10までカウントアップする Clear 10になると onCompleted してカウント初期化する
+c.count()
+```
+```javascript
+const c = valk.count(-10) // 10から0までカウントアップする Clear 0になると onCompleted してカウント初期化する
+c.count()
+```
+
+```javascript
+// 腹筋10回3セット
+const set = valk.count(3, {type:valk.count.onCompletedTypes.Every, onComplete:(v)=>console.log(`${v} set Completed !!`)});
+const time = valk.count(10, {type:valk.count.onCompletedTypes.Clear, 
+    onCount:(v)=>{
+        if (set.isCompleted) { return set.onComplete(v); }
+        return v++;
+    },
+    onCounted:(v)=>{ console.log(`${v}/${this.end} time ${set.v}/${set.end} set`); },
+    onComplete:(v)=>{
+        console.log(`${v} time Completed !!`);
+        set.count();
+}});
+[...Array(10*3)].map(v=>time.count())
+const all = set.v * time.end
 ```
 

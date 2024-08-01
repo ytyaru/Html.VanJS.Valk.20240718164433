@@ -108,8 +108,7 @@ class Type {
             this.#defineMain(fnName, fn) // 正式
             for (let name of abbrs) { this.#defineAbbr(`is${name}`, fn) } // 略名
             // 複数形
-            //const fns = (args)=>Array.isArray(args) && args.every(x=>getter(x))
-            const fns = (args)=>Array.isArray(args) && args.every(x=>fn(x))
+            const fns = (args)=>Array.isArray(args) && args.every(x=>getter(x))
             this.#defineMain(`${fnName}s`, fns) // 複数形
             for (let name of abbrs) { this.#defineAbbr(`is${name}s`, fns) } // 略名
         }
