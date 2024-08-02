@@ -355,6 +355,11 @@ window.addEventListener('DOMContentLoaded', (event) => {
         (t)=>0===t._end,
         (t)=>valk.enums.CounterCompleted.Error===t._onCompletedType,
     ])
+    a.e(valk.errors.CounterError, `すでにCompletedです。`, ()=>{
+        const c = valk.count(-1, {type:valk.enums.CounterCompleted.Error})
+        c.count()
+        c.count()
+    })
     bb.test(valk.count(5, 9), [
         (t)=>{console.log(t);return true},
         (t)=>5===t.v,
@@ -362,6 +367,10 @@ window.addEventListener('DOMContentLoaded', (event) => {
         (t)=>5===t._start,
         (t)=>9===t._end,
         (t)=>valk.enums.CounterCompleted.Clear===t._onCompletedType,
+        (t)=>{t.count();return 6===t.v;},
+        (t)=>{t.count();return 7===t.v;},
+        (t)=>{t.count();return 8===t.v;},
+        (t)=>{t.count();return 5===t.v;},
     ])
     bb.test(valk.count(9, 5), [
         (t)=>{console.log(t);return true},
@@ -370,6 +379,10 @@ window.addEventListener('DOMContentLoaded', (event) => {
         (t)=>9===t._start,
         (t)=>5===t._end,
         (t)=>valk.enums.CounterCompleted.Clear===t._onCompletedType,
+        (t)=>{t.count();return 8===t.v;},
+        (t)=>{t.count();return 7===t.v;},
+        (t)=>{t.count();return 6===t.v;},
+        (t)=>{t.count();return 9===t.v;},
     ])
     bb.test(valk.count(5, 9, {type:valk.enums.CounterCompleted.Error}), [
         (t)=>{console.log(t);return true},
@@ -378,7 +391,10 @@ window.addEventListener('DOMContentLoaded', (event) => {
         (t)=>5===t._start,
         (t)=>9===t._end,
         (t)=>valk.enums.CounterCompleted.Error===t._onCompletedType,
-        (t)=>{t.count(); console.log(t);return 6===t.v;}
+        (t)=>{t.count();return 6===t.v;},
+        (t)=>{t.count();return 7===t.v;},
+        (t)=>{t.count();return 8===t.v;},
+        (t)=>{a.e(valk.errors.CounterError, `すでにCompletedです。`, ()=>{t.count()});return true;},
     ])
     a.fin()
 });
