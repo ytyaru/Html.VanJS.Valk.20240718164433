@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title></title>
+<meta name="description" content="">
+<meta name="author" content="ytyaru">
+<link rel="license" href="https://creativecommons.org/licenses/by-sa/4.0/deed.ja">
+<link rel="icon" href="../asset/image/author/ytyaru.png">
+<link rel="stylesheet" href="css/style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../../lib/van/1.2.6/nomodule.min.js"></script>
+<script src="../../js/footer.js"></script>
+<!--<script src="../../lib/util/assertion.js"></script>-->
+<script src="../../lib/util/array/compare.js"></script>
+<script src="../js/valk.js"></script>
+<script src="type.js"></script>
+<script src="assertion.js"></script>
+<script src="black-box.js"></script>
+<!--<script src="js/main.js"></script>-->
+<script>
+window.addEventListener('DOMContentLoaded', async(event)=>{
+    const a = new Assertion()
+    const bb = new BlackBox(a)
+    // Weak系はFixにする動機なしのため実装不要
+    /*
+    let fs = new valk.types.FixedWeakSet()
+//    a.t(Type.isItr(fs)) // weak の特性上 非iterator
+    a.f(Type.isAry(fs))
+    a.t(Type.isIns(fs))
+    a.t(Type.isIns(fs, valk.types.FixedWeakSet))
+    bb.test(valk.types.FixedArray, (t)=>Type.isAry(t))
+    //fs = new valk.types.FixedWeakSet(...'a,b,c,d,e'.split(','))
+    const [v1,v2,v3,v4,v5] = [{},{},{},{},{}]
+    //fs = new valk.types.FixedWeakSet('a,b,c,d,e'.split(','))
+    fs = new valk.types.FixedWeakSet([v1,v2,v3,v4,v5])
+    console.log(fs, fs[0])
+    //bb.test(fs, (t)=>t.compare(new WeakSet(...'a,b,c,d,e'.split(','))))
+//    bb.test(fs, (t)=>t.compare(new valk.types.FixedWeakSet([v1,v2,v3,v4,v5]))) // 非iteratorのため比較不能
+//    bb.test(fs, (t)=>'a'===t[0])
+//    'copyWithin,fill,pop,push,reverse,shift,sort,splice,unshift'.split(',').forEach((mn)=>bb.test(fs, mn, valk.errors.FixError, `Assignment to fix variable.`))
+    'add,clear,delete'.split(',').forEach((mn)=>bb.test(fs, mn, valk.errors.FixError, `Assignment to fix variable.`))
+//    a.t(fs.filter(v=>a==='a') instanceof valk.types.FixedArray)
+//    bb.test(new valk.types.FixedArray(...'a,b,c,d,e'.split(',')), 'copyWithin', valk.errors.FixError, `Assignment to fix variable.`)
+//    bb.test(new valk.types.FixedArray(...'a,b,c,d,e'.split(',')), 'fill', valk.errors.FixError, `Assignment to fix variable.`)
+//    bb.test(new valk.types.FixedArray(...'a,b,c,d,e'.split(',')), 'pop', valk.errors.FixError, `Assignment to fix variable.`)
+    */
+    a.fin()
+})
+</script>
+</head>
+<body>
+    <main></main>
+    <footer></footer>
+</body>
+</html>
+<!-- https://coliss.com/articles/build-websites/operation/work/html-template-for-web-apps-or-sites.html -->
+<!-- https://coliss.com/articles/build-websites/operation/work/html5-template-for-2018.html -->

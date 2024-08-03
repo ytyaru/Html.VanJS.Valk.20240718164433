@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title></title>
+<meta name="description" content="">
+<meta name="author" content="ytyaru">
+<link rel="license" href="https://creativecommons.org/licenses/by-sa/4.0/deed.ja">
+<link rel="icon" href="../asset/image/author/ytyaru.png">
+<link rel="stylesheet" href="css/style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../../lib/van/1.2.6/nomodule.min.js"></script>
+<script src="../../js/footer.js"></script>
+<!--<script src="../../lib/util/assertion.js"></script>-->
+<script src="../../lib/util/array/compare.js"></script>
+<script src="../js/valk.js"></script>
+<script src="type.js"></script>
+<script src="assertion.js"></script>
+<script src="black-box.js"></script>
+<!--<script src="js/main.js"></script>-->
+<script>
+window.addEventListener('DOMContentLoaded', async(event)=>{
+    const a = new Assertion()
+    const bb = new BlackBox(a)
+    let fm = new valk.types.FixedMap()
+    a.t(Type.isItr(fm))
+    a.f(Type.isAry(fm))
+    a.t(Type.isIns(fm))
+    a.t(Type.isIns(fm, valk.types.FixedMap))
+    bb.test(valk.types.FixedArray, (t)=>Type.isAry(t))
+    fm = new valk.types.FixedMap([['k','v'], ['l','w']])
+    console.log(fm, fm[0])
+    console.log([...fm.entries()])
+    bb.test(fm, (t)=>t.compare(new Map([['k','v'], ['l','w']])))
+    a.t('v'===fm.get('k'))
+    a.t('w'===fm.get('l'))
+//    bb.test(fm, (t)=>'a'===t[0])
+//    'copyWithin,fill,pop,push,reverse,shift,sort,splice,unshift'.split(',').forEach((mn)=>bb.test(fm, mn, valk.errors.FixError, `Assignment to fix variable.`))
+
+    //a.e(valk.errors.FixError, `Assignment to fix variable.`, ()=>fm.set('K','V'))
+    'set,clear,delete,set'.split(',').forEach((mn)=>bb.test(fm, mn, valk.errors.FixError, `Assignment to fix variable.`))
+
+//    a.t(fm.filter(v=>a==='a') instanceof valk.types.FixedArray)
+//    bb.test(new valk.types.FixedArray(...'a,b,c,d,e'.split(',')), 'copyWithin', valk.errors.FixError, `Assignment to fix variable.`)
+//    bb.test(new valk.types.FixedArray(...'a,b,c,d,e'.split(',')), 'fill', valk.errors.FixError, `Assignment to fix variable.`)
+//    bb.test(new valk.types.FixedArray(...'a,b,c,d,e'.split(',')), 'pop', valk.errors.FixError, `Assignment to fix variable.`)
+
+    //bb.test(new valk.types.FixedMap(fm), (t)=>'v'===t.get('k') && 'w'===t.get('l'))
+    fm = new valk.types.FixedMap([['k','v'], ['l','w']])
+    console.log([...fm.entries()])
+    bb.test(new valk.types.FixedMap(fm), (t)=>{console.log(t, [...t.entries()]);return 'v'===t.get('k') && 'w'===t.get('l')})
+    bb.test(new valk.types.FixedMap({k:'v', l:'w'}), (t)=>'v'===t.get('k') && 'w'===t.get('l'))
+    a.fin()
+})
+</script>
+</head>
+<body>
+    <main></main>
+    <footer></footer>
+</body>
+</html>
+<!-- https://coliss.com/articles/build-websites/operation/work/html-template-for-web-apps-or-sites.html -->
+<!-- https://coliss.com/articles/build-websites/operation/work/html5-template-for-2018.html -->
