@@ -404,6 +404,7 @@ class ExceptionAssertion extends BaseAssertion {
         return this._M.msg.exception.runtime.type(type.name, err.constructor.name)
     }
     __eCheckMsgMsg(msg, err) {
+        if (Type.isNU(msg) || ''===msg) { return '' } // null, undefined, ''ならテスト不要
         if (msg instanceof RegExp) {
             if (msg.test(msg)) { return '' }
             // `メッセージが違います。\n期待値: ${msg}\n実際値: ${err.message}`

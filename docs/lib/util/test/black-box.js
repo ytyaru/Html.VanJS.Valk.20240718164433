@@ -131,6 +131,33 @@ class BlackBoxFn extends BlackBoxBase {
             this._a[op.assert](...this._getAssertArgs(op))
         }
     }
+    error(...args) {
+        const l = args.length - 1
+        this._errorMulti(l, ...args)
+    }
+    _isErrorMulti(l, ...args) {
+        console.log(l, args)
+        console.log(args.length, Type.isErrIns(args[0]), Type.isFn(args[1]))
+        if (!Type.isAry(args[l])) { return false }
+        if (3===args.length && Type.isErrIns(args[0]) && Type.isFn(args[1])) { return {fn:args[1], assert:'e', assArgs:{type:args[0].constructor, msg:args[0].message}} }
+        if (3===args.length && Type.isErrCls(args[0]) && Type.isFn(args[1])) { return {fn:args[2], assert:'e', assArgs:{type:args[0], msg:undefined}} }
+        if (4===args.length 
+            && Type.isErrCls(args[0]) 
+            && (Type.isStr(args[1]) || Type.isRegExp(args[1])) 
+            && Type.isFn(args[2]) && Type.isAry(args[3])) { return {fn:args[2], assert:'e', assArgs:{type:args[0], msg:args[1]}} }
+        return false
+    }
+    _errorMulti(l, ...args) {
+        const op = this._isErrorMulti(l, ...args)
+        //if (!Type.isObj(op)) { throw new Error(`引数の最初が例外型かそのインスタンスのときで、その次が関数のとき、引数は次のパターンであるべきです。\n[ErrIns, fn, [[arg1, args2, ...], ...]]\n[ErrCls, fn, [[arg1, args2, ...], ...]]\n[ErrCls, msg, fn, [[arg1, args2, ...], ...]]`) }
+        console.log('*****************', op)
+        if (!Type.isObj(op)) { return false }
+        console.log('*****************')
+        for (let fnArgs of args[l]) {
+            op.args = fnArgs
+            this._a[op.assert](...this._getAssertArgs(op))
+        }
+    }
 }
 class BlackBoxCls extends BlackBoxBase {
     constructor(assertion) { super(assertion) }
@@ -374,6 +401,108 @@ class BlackBoxCls extends BlackBoxBase {
             this._once(ARGS.length-1, ...ARGS)
         }
     }
+    error(...args) {
+        const l = args.length - 1
+        this._errorMulti(l, ...args)
+    }
+    _isErrorMulti(l, ...args) {
+        console.log(l, args)
+        console.log(args.length, Type.isErrIns(args[0]), Type.isFn(args[1]))
+        if (!Type.isAry(args[l])) { return false }
+        // constructor
+        if (3===args.length && Type.isErrIns(args[0]) && Type.isCls(args[1])) { return {context:null, target:args[1], assert:'e', assArgs:{type:args[0].constructor, msg:args[0].message}} }
+        if (3===args.length && Type.isErrCls(args[0]) && Type.isCls(args[1])) { return {context:null, target:args[1], assert:'e', assArgs:{type:args[0], msg:undefined}} }
+        if (4===args.length 
+            && Type.isErrCls(args[0]) 
+            && (Type.isStr(args[1]) || Type.isRegExp(args[1])) 
+            && Type.isCls(args[2]) && Type.isAry(args[3])) { return {context:null, target:args[2], assert:'e', assArgs:{type:args[0], msg:args[1]}} }
+
+        // static method
+        if (4===args.length 
+            && Type.isErrIns(args[0]) 
+            && Type.isCls(args[1]) && Type.isStr(args[2])) {
+            console.log('XXXXXXXXXXXXXXX')
+            for (let kind of 'Method'.split(',')) {
+                if (this[`_has${kind}`](args[1], args[2])) {
+                    const fn = this[`_get${kind}Fn`](args[1], args[2])
+                    return {context:args[1], target:fn, assert:'e', assArgs:{type:args[0].constructor, msg:args[0].message}}
+                }
+            }
+            throw new Error(`errorテストで引数4つのとき、第二引数がクラスなら、第三引数のテスト対象名はstatic method名であるべきです。`)
+        }
+        if (4===args.length 
+            && Type.isErrCls(args[0]) 
+            && Type.isCls(args[1]) && Type.isStr(args[2])) { 
+            for (let kind of 'Method'.split(',')) {
+                if (this[`_has${kind}`](args[1], args[2])) {
+                    const fn = this[`_get${kind}Fn`](args[1], args[2])
+                    return {context:args[1], target:fn, assert:'e', assArgs:{type:args[0], msg:undefined}}
+                }
+            }
+            throw new Error(`errorテストで引数4つのとき、第二引数がクラスなら、第三引数のテスト対象名はstatic method名であるべきです。`)
+        }
+        // getter, setter, instance method
+        if (4===args.length 
+            && Type.isErrIns(args[0]) 
+            && Type.isIns(args[1]) && Type.isStr(args[2])) {
+            for (let kind of 'Method,Getter,Setter'.split(',')) {
+                if (this[`_has${kind}`](args[1], args[2])) {
+                    const fn = this[`_get${kind}Fn`](args[1], args[2])
+                    return {context:args[1], target:fn, assert:'e', assArgs:{type:args[0].constructor, msg:args[0].message}}
+                }
+            }
+            throw new Error(`errorテストで引数4つのとき、第二引数がインスタンスなら、第三引数のテスト対象名はgetter,setter,instance method名のいずれかであるべきです。`)
+        }
+        if (4===args.length 
+            && Type.isErrCls(args[0]) 
+            && Type.isIns(args[1]) && Type.isStr(args[2])) {
+            for (let kind of 'Method,Getter,Setter'.split(',')) {
+                if (this[`_has${kind}`](args[1], args[2])) {
+                    const fn = this[`_get${kind}Fn`](args[1], args[2])
+                    return {context:args[1], target:fn, assert:'e', assArgs:{type:args[0], msg:undefined}}
+                }
+            }
+            throw new Error(`errorテストで引数4つのとき、第二引数がインスタンスなら、第三引数のテスト対象名はgetter,setter,instance method名のいずれかであるべきです。`)
+        }
+
+        // static method
+        if (5===args.length 
+            && Type.isErrCls(args[0]) 
+            && (Type.isStr(args[1]) || Type.isRegExp(args[1]))
+            && Type.isCls(args[2]) && Type.isStr(args[3])) { 
+            for (let kind of 'Method'.split(',')) {
+                if (this[`_has${kind}`](args[2], args[3])) {
+                    const fn = this[`_get${kind}Fn`](args[2], args[3])
+                    return {context:args[2], target:fn, assert:'e', assArgs:{type:args[0], msg:args[1]}}
+                }
+            }
+            throw new Error(`errorテストで引数5つのとき、第三引数がクラスなら、第四引数のテスト対象名はstatic method名であるべきです。`)
+        }
+        // getter, setter, instance method
+        if (5===args.length 
+            && Type.isErrCls(args[0]) 
+            && (Type.isStr(args[1]) || Type.isRegExp(args[1]))
+            && Type.isIns(args[2]) && Type.isStr(args[3])) {
+            for (let kind of 'Method,Getter,Setter'.split(',')) {
+                if (this[`_has${kind}`](args[2], args[3])) {
+                    const fn = this[`_get${kind}Fn`](args[2], args[3])
+                    return {context:args[2], target:fn, assert:'e', assArgs:{type:args[0], msg:undefined}}
+                }
+            }
+            throw new Error(`errorテストで引数5つのとき、第三引数がインスタンスなら、第四引数のテスト対象名はgetter,setter,instance method名のいずれかであるべきです。`)
+        }
+        return false
+    }
+    _errorMulti(l, ...args) {
+        const op = this._isErrorMulti(l, ...args)
+        //if (!Type.isObj(op)) { throw new Error(`引数の最初が例外型かそのインスタンスのときで、その次が関数のとき、引数は次のパターンであるべきです。\n[ErrIns, fn, [[arg1, args2, ...], ...]]\n[ErrCls, fn, [[arg1, args2, ...], ...]]\n[ErrCls, msg, fn, [[arg1, args2, ...], ...]]`) }
+        if (!Type.isObj(op)) { return false }
+        for (let fnArgs of args[l]) {
+            op.args = fnArgs
+            this._a[op.assert](...this._getAssertArgs(op))
+        }
+    }
+
 }
 class BlackBox {
     constructor(assertion) {
@@ -383,7 +512,19 @@ class BlackBox {
     }
     test(...args) {
         if (args.length < 2) { throw new Error(`可変長引数の要素数は2以上あるべきです。[target, assArgs]等。`) }
-        if (Type.isFn(args[0])) { this._fn.test(...args) }
+        if (Type.isErrIns(args[0]) || Type.isErrCls(args[0])) {
+            if (3<=args.length) {
+                const l = args.length-1
+                if (Type.isAry(args[l])) {
+                    if (Type.isFn(args[l-1])) { this._fn.error(...args) }
+                    else if (Type.isCls(args[l-1])
+                        || ((Type.isCls(args[l-2]) || Type.isIns(args[l-2])) 
+                        && Type.isStr(args[l-1])) ) { this._cls.error(...args) }
+                    else { throw new Error(`可変長引数の最初の要素が例外型かそのインスタンスなら、引数パターンは次のいずれかであるべきです。\n[ERR, fn, ARG]\n[ERR, CLS, ARG]\nERR: ErrIns/ErrCls(,msg)\nARG: [[arg0, arg1, ...], ...]\nCLS: Cls/Ins,name`) }
+                }
+            }
+        }
+        else if (Type.isFn(args[0])) { this._fn.test(...args) }
         else if (Type.isCls(args[0]) || Type.isIns(args[0])) { this._cls.test(...args) }
         else { throw new Error(`可変長引数の最初の要素は関数かクラスかインスタンスであるべきです。`) }
     }

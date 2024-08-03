@@ -133,7 +133,8 @@ class Counter {
     _initN() { this._initR(0, Infinity); this._onCompletedType = Enum.types.CounterCompleted.Over; }
     _initV(v) { this._initR(0<=v ? 0 : Math.abs(v), 0<=v ? v : 0) }
     _initVO(v,o) { this._initRO(0<=v ? 0 : Math.abs(v), 0<=v ? v : 0, o) }
-    _initO(o) { this._initRO(0, Infinity, o) }
+    //_initO(o) { this._initRO(0, Infinity, o) }
+    _initO(o) { this._initRO(0, Infinity, {type:Enum.types.CounterCompleted.Over, ...o}) }
     _initR(start, end) {
         this._initRO(start, end, {
             onStep: (start < end ? ((v,tick,op)=>++v) : ((v,tick,op)=>--v)), 
@@ -162,20 +163,23 @@ class Counter {
     }
     get v() { return this._v }
     //get isCompleted() { return this._isCompleted }
-    get isCompleted() {
+    get _isCompleted() {
         if ( this._isAsc && this._end <= this._v) { return true }
         if (!this._isAsc && this._v <= this._end) { return true }
         return false
     }
+    get isCompleted() { return this._isCompletedOnce }
     count() {
         //if (this._end===this._v) { }
         //this._v = this._onStep(this._v, this._tick, this._options)
         //this._v = this._options.onStep(this._v, this._tick, this._options)
         //console.log(this._v)
         //this._isCompleted = this._end <= this._v
-        if (this.isCompleted && valk.enums.CounterCompleted.Keep===this._onCompletedType) {return}
-        else { this._v = this._options.onStep(this._v, this._tick, this._options) }
-        if (this.isCompleted) {
+        if (this._isCompleted && valk.enums.CounterCompleted.Keep===this._onCompletedType) {return}
+        //if (this._isCompleted && (this._onCompletedType.isKeep || this._onCompletedType.isEvery)) {return}
+        //else { this._v = this._options.onStep(this._v, this._tick, this._options) }
+        else { if (!(this._isCompletedOnce && this._onCompletedType.isEvery)) {this._v = this._options.onStep(this._v, this._tick, this._options)} }
+        if (this._isCompleted) {
             console.log(valk.enums)
             console.log(valk.enums.CounterCompleted)
             switch (this._onCompletedType) {// this._options.type
@@ -213,10 +217,10 @@ class Counter {
             //else {}
         }
         */
-        //if (this.isCompleted && (this._options.type.isKeep || this._options.type.isEvery)) {}
-        if (this.isCompleted && this._options.type.isKeep) {return}
+        //if (this._isCompleted && (this._options.type.isKeep || this._options.type.isEvery)) {}
+        if (this._isCompleted && this._options.type.isKeep) {return}
         else { this._v = this._options.onStep(this._v, this._tick, this._options) }
-        if (this.isCompleted) {
+        if (this._isCompleted) {
             if (this._options.type.isError) { throw new CounterError(`すでにCompletedです。`) }
             if (this._options.type.isOver && this._isCompletedOnce) { return }
             this._options.onComplete(this._v, this._tick, this._options)

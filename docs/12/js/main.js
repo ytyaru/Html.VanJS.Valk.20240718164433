@@ -270,7 +270,20 @@ window.addEventListener('DOMContentLoaded', (event) => {
     a.t(valk.enums.CounterCompleted.Error instanceof valk.enums.CounterCompleted.type)
     a.e(ReferenceError, `Key does not exist.: X`, ()=>valk.enums.CounterCompleted.isTypeOf(valk.enums.CounterCompleted.X))
     a.f(valk.enums.CounterCompleted.isTypeOf('Error'))
+
+    // Enum is系
     a.t(valk.enums.CounterCompleted.Error.isError)
+    a.t(valk.enums.CounterCompleted.Keep.isKeep)
+    a.t(valk.enums.CounterCompleted.Over.isOver)
+    a.t(valk.enums.CounterCompleted.Every.isEvery)
+    a.t(valk.enums.CounterCompleted.Clear.isClear)
+    a.f(valk.enums.CounterCompleted.Error.isKeep)
+    for (let k of valk.enums.CounterCompleted.keys) {
+        for (let v of valk.enums.CounterCompleted.keys) {
+            const assert = k===v ? 't' : 'f'
+            a[assert](valk.enums.CounterCompleted[k][`is${v}`])
+        }
+    }
 //    
 
     // counter
@@ -283,7 +296,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
         (t)=>Infinity===t._end,
         (t)=>valk.enums.CounterCompleted.Over===t._onCompletedType,
         (t)=>{t.count();return 1===t.v;},
-        (t)=>1===t.v&&!t.isCompleted,
+        (t)=>1===t.v&&!t._isCompleted,
     ])
     bb.test(valk.count(0), [
         (t)=>0===t.v,
@@ -293,7 +306,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
         (t)=>!t._isCompletedOnce,
         (t)=>valk.enums.CounterCompleted.Over===t._onCompletedType,
         (t)=>{t.count();return 1===t.v;},
-        (t)=>1===t.v && !t.isCompleted && !t._isCompletedOnce,
+        (t)=>1===t.v && !t._isCompleted && !t._isCompletedOnce,
     ])
     bb.test(valk.count(1), [
         (t)=>{console.log(t);return true},
@@ -304,7 +317,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
         (t)=>!t._isCompletedOnce,
         (t)=>valk.enums.CounterCompleted.Clear===t._onCompletedType,
         (t)=>{t.count();console.log(t);return 0===t.v;},
-        (t)=>0===t.v && !t.isCompleted && t._isCompletedOnce,
+        (t)=>0===t.v && !t._isCompleted && t._isCompletedOnce,
     ])
     bb.test(valk.count(-1), [
         (t)=>1===t.v,
@@ -314,7 +327,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
         (t)=>!t._isCompletedOnce,
         (t)=>valk.enums.CounterCompleted.Clear===t._onCompletedType,
         (t)=>{t.count();return 1===t.v;},
-        (t)=>1===t.v && !t.isCompleted && t._isCompletedOnce,
+        (t)=>1===t.v && !t._isCompleted && t._isCompletedOnce,
     ])
     bb.test(valk.count({type:valk.enums.CounterCompleted.Error}), [
         (t)=>{console.log(t);return true},
@@ -397,6 +410,163 @@ window.addEventListener('DOMContentLoaded', (event) => {
         (t)=>{t.count();return 8===t.v;},
         (t)=>{a.e(valk.errors.CounterError, `すでにCompletedです。`, ()=>{t.count()});return true;},
     ])
+
+    // typeを指定してみる
+    ;(function(){
+        let completedNum = 0
+        bb.test(valk.count({onComplete:()=>++completedNum}), [
+            (t)=>{console.log(t);return true},
+            (t)=>0===t.v,
+            (t)=>0===t._v,
+            (t)=>0===t._start,
+            (t)=>Infinity===t._end,
+            (t)=>valk.enums.CounterCompleted.Over===t._onCompletedType,
+            (t)=>0===completedNum,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>0===completedNum,
+            (t)=>{t.count();return 2===t.v;},
+            (t)=>0===completedNum,
+        ])
+    })();
+    // Keep
+    ;(function(){
+        let completedNum = 0
+        bb.test(valk.count(1, {type:valk.enums.CounterCompleted.Keep, onComplete:()=>++completedNum}), [
+            (t)=>{console.log(t);return true},
+            (t)=>0===t.v,
+            (t)=>0===t._v,
+            (t)=>0===t._start,
+            (t)=>1===t._end,
+            (t)=>valk.enums.CounterCompleted.Keep===t._onCompletedType,
+            (t)=>0===completedNum,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>1===completedNum,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>1===completedNum,
+        ])
+    })();
+    // Over
+    ;(function(){
+        let completedNum = 0
+        bb.test(valk.count(1, {type:valk.enums.CounterCompleted.Over, onComplete:()=>++completedNum}), [
+            (t)=>{console.log(t);return true},
+            (t)=>0===t.v,
+            (t)=>0===t._v,
+            (t)=>0===t._start,
+            (t)=>1===t._end,
+            (t)=>valk.enums.CounterCompleted.Over===t._onCompletedType,
+            (t)=>0===completedNum,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>1===completedNum,
+            (t)=>{t.count();return 2===t.v;}, // onStep()がonCompleted後も毎回実行される
+            (t)=>1===completedNum,
+        ])
+    })();
+    // Every
+    ;(function(){
+        let completedNum = 0
+        bb.test(valk.count(1, {type:valk.enums.CounterCompleted.Every, onComplete:()=>++completedNum}), [
+            (t)=>{console.log(t);return true},
+            (t)=>0===t.v,
+            (t)=>0===t._v,
+            (t)=>0===t._start,
+            (t)=>1===t._end,
+            (t)=>valk.enums.CounterCompleted.Every===t._onCompletedType,
+            (t)=>0===completedNum,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>1===completedNum,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>2===completedNum, // onCompleted()がonCompleted後も毎回実行される
+        ])
+    })();
+    // Clear
+    ;(function(){
+        let completedNum = 0
+        bb.test(valk.count(1, {type:valk.enums.CounterCompleted.Clear, onComplete:()=>++completedNum}), [
+//            (t)=>{console.log(t);return true},
+            (t)=>0===t.v,
+            (t)=>0===t._v,
+            (t)=>0===t._start,
+            (t)=>1===t._end,
+            (t)=>valk.enums.CounterCompleted.Clear===t._onCompletedType,
+            (t)=>0===completedNum,
+            (t)=>{t.count();return 0===t.v;},
+            (t)=>1===completedNum,
+            (t)=>{t.count();return 0===t.v;},
+            (t)=>2===completedNum, // onCompleted()がonCompleted後も毎回実行される
+        ])
+    })();
+    // Clear（整数値が一つあるパターンだとClearがデフォルト。整数値が一つもないとOverがデフォルト（永遠にCompletedしない））
+    ;(function(){
+        let completedNum = 0
+        bb.test(valk.count(1, {onComplete:()=>++completedNum}), [
+            (t)=>0===t.v,
+            (t)=>0===t._v,
+            (t)=>0===t._start,
+            (t)=>1===t._end,
+            (t)=>valk.enums.CounterCompleted.Clear===t._onCompletedType,
+            (t)=>0===completedNum,
+            (t)=>{t.count();return 0===t.v;},
+            (t)=>1===completedNum,
+            (t)=>{t.count();return 0===t.v;},
+            (t)=>2===completedNum, // onCompleted()がonCompleted後も毎回実行される
+        ])
+    })();
+
+    // 10回3セット
+    ;(function(){
+        const set = valk.count(3)
+        const time = valk.count(10, {onComplete:()=>set.count()})
+        let completedNum = 0
+        bb.test(time, [
+            (t)=>0===t.v,
+            (t)=>0===t._v,
+            (t)=>0===t._start,
+            (t)=>10===t._end,
+            (t)=>valk.enums.CounterCompleted.Clear===t._onCompletedType,
+            (t)=>0===completedNum,
+            (t)=>0===set.v,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>{t.count();return 2===t.v;},
+            (t)=>{t.count();return 3===t.v;},
+            (t)=>{t.count();return 4===t.v;},
+            (t)=>{t.count();return 5===t.v;},
+            (t)=>{t.count();return 6===t.v;},
+            (t)=>{t.count();return 7===t.v;},
+            (t)=>{t.count();return 8===t.v;},
+            (t)=>{t.count();return 9===t.v;},
+            (t)=>{t.count();return 0===t.v;},
+            (t)=>1===set.v && !set.isCompleted,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>{t.count();return 2===t.v;},
+            (t)=>{t.count();return 3===t.v;},
+            (t)=>{t.count();return 4===t.v;},
+            (t)=>{t.count();return 5===t.v;},
+            (t)=>{t.count();return 6===t.v;},
+            (t)=>{t.count();return 7===t.v;},
+            (t)=>{t.count();return 8===t.v;},
+            (t)=>{t.count();return 9===t.v;},
+            (t)=>{t.count();return 0===t.v;},
+            (t)=>2===set.v && !set.isCompleted,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>{t.count();return 2===t.v;},
+            (t)=>{t.count();return 3===t.v;},
+            (t)=>{t.count();return 4===t.v;},
+            (t)=>{t.count();return 5===t.v;},
+            (t)=>{t.count();return 6===t.v;},
+            (t)=>{t.count();return 7===t.v;},
+            (t)=>{t.count();return 8===t.v;},
+            (t)=>{t.count();return 9===t.v;},
+            (t)=>{t.count();return 0===t.v;},
+            (t)=>{console.log(set);return 0===set.v && set.isCompleted},
+            //(t)=>3===set.v && set.isCompleted,
+            /*
+            (t)=>2===completedNum, // onCompleted()がonCompleted後も毎回実行される
+            */
+        ])
+    })();
+
+
     a.fin()
 });
 window.addEventListener('beforeunload', (event) => {
