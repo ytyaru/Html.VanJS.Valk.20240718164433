@@ -183,11 +183,15 @@ class Counter {
     }
 }
 class Some {
+    static of(v, candidates) { return new Some(v, candidates) }
+    /*
     static of(v, candidates) {
         const cands = (candidates instanceof Set) ? candidates : ((Array.isArray(candidates) ? new Set(candidates ) : null))
         if (null===cands) { throw new SomeError(`Only array or set types are valid as candidates for the second argument.`) }
         //return new Proxy({v:v, candidates:candidates}, { // candidates: Set
-        return new Proxy({v:v, candidates:cands}, { // candidates: Set
+        //return new Proxy({v:v, candidates:cands}, { // candidates: Set
+        const v = new Some(v, cands)
+        return new Proxy(v, {
             set(target, key, value, receiver) {
                 if (key in target) {
                     if (candidates.has(value)) { target[key] = value }
@@ -198,6 +202,7 @@ class Some {
                 //if ('typeName'===key) { return `Proxy(valk.Some(${[...target.candidates.values()]}))` }
                 if ('typeName'===key) { return `Proxy(valk.Some)` }
 //                if (fixErrFnNms.some(n=>n===key)) { throw new FixError() }
+                if ('match'===key) { return Some.match(target.v, target.candidates, ) }
                 if (key in target) {
                     if (Type.hasGetter(target, key)) { return Reflect.get(target, key) } // ゲッター
                     else if ('function'===typeof target[key]) { return target[key].bind(target) } // メソッド参照
@@ -207,7 +212,74 @@ class Some {
             },
         })
     }
-    constructor(v, candidates) { return Some.of(v, candidates) }
+    */
+    //constructor(v, candidates) { this._v=v; this._cands=candidates; return Some.of(v, candidates) }
+    //constructor(v, candidates) { this._v=v; this._cands=candidates; }
+    constructor(v, candidates) {
+        this._v = v
+        this._cands = (candidates instanceof Set) ? candidates : ((Array.isArray(candidates) ? new Set(candidates ) : null))
+        if (null===this._cands) { throw new TypeError(`Only array or set types are valid as candidates for the second argument.`) }
+        if (!this._cands.has(this._v)) { throw new TypeError(`The initial value should match one of the candidates.`) }
+        return new Proxy(this, {
+            set(target, key, value, receiver) {
+                if (key in target) {
+                    if (Type.hasSetter(target, key)) { return Reflect.set(target, key, value) }
+                    if (key in target) { target[key] = value }
+//                    if (target.candidates.has(value)) { target[key] = value }
+//                    else { throw new SomeError() }
+                    else { throw new Error(`Assignment prohibited: ${key}`) }
+                } else { throw new ReferenceError(`Property does not exist: ${key}`) }
+            },
+            get(target, key, receiver) {
+                //if ('typeName'===key) { return `Proxy(valk.Some(${[...target.candidates.values()]}))` }
+                if ('typeName'===key) { return `Proxy(valk.Some)` }
+//                if (fixErrFnNms.some(n=>n===key)) { throw new FixError() }
+//                if ('match'===key) { return Some.match(target.v, target.candidates, ) }
+                if (key in target) {
+                    if (Type.hasGetter(target, key)) { return Reflect.get(target, key) } // ゲッター
+                    else if ('function'===typeof target[key]) { return target[key].bind(target) } // メソッド参照
+                    return target[key] // プロパティ値
+                }
+                else { throw new ReferenceError(`Property does not exist: ${key}`) }
+            },
+        })
+    }
+    get v( ) { return this._v }
+    set v(v) {
+        if (this._cands.has(v)) { this._v = v }
+        else { throw new SomeError() }
+    }
+    get candidates() { return this._cands }
+    match(...args) {
+        const cbFns = [...args]
+        if (cbFns < this._cands.size) { throw new TypeError(`match()の可変長引数の数は候補と同じかそれ以上であるべきです。: actula:${cbFns.length} expected: ${this._cands.size} (${[...this._cands.values()]})`) }
+//        if (![this._cands, cbFns].every(v=>Array.isArray(v))) { throw new TypeError(`match()の可変長引数の数は候補と同数であるべきです。: actula:${cbFns.length} expected: ${this._cands.size} (${[...this._cands.values()]})`) }
+//        if (cbFns.length < this._cands.size) { throw new TypeError(`match()の引数は候補の数と同じかそれ以上の配列であるべきです。`) }
+        for (let i=0; i<this._cands.size; i++) {
+            const idx = [...this._cands].indexOf(this._v)
+            if (-1 !== idx) { return (Type.isSFn(cbFns[idx])) ? cbFns[idx](this._v, idx) : cbFns[idx] }
+        }
+        // もし候補数より多くの関数があるなら次の一つだけ実行する（ないなら未定義を返す）
+        if (this._cands.size < cbFns.length) { return (Type.isSFn(cbFns[idx])) 
+            ? cbFns[this._cands.size]() 
+            : cbFns[this._cands.size] }
+        return undefined
+//        if (candidates.size===cbFns.length) { return undefined }
+    }
+    /*
+    static match(v, candidates, cbFns) {
+        if (![candidates, cbFns].every(v=>Array.isArray(v))) { throw new TypeError(`Some.match()の第二、第三引数はどちらも配列であるべきです。`) }
+        if (cbFns.length < candidates.size) { throw new TypeError(`Some.match()の第三引数cbFnsは第二引数candidatesの要素数と同じかそれ以上の配列であるべきです。`) }
+        for (let i=0; i<candidates.size; i++) {
+            const idx = [...candidates].indexOf(v)
+            if (-1 !== idx) { return cbFns[idx](v,idx) }
+        }
+        // もし候補数より多くの関数があるなら次の一つだけ実行する（ないなら未定義を返す）
+        if (candidates.size < cbFns.length) { return cbFns[candidates.size]() }
+        return undefined
+//        if (candidates.size===cbFns.length) { return undefined }
+    }
+    */
 }
 
 class Range {

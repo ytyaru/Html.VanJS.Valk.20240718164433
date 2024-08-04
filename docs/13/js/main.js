@@ -589,8 +589,16 @@ window.addEventListener('DOMContentLoaded', (event) => {
     })
     a.e(ReferenceError, `Property does not exist: x`, ()=>{
         const s = valk.some(0, new Set([0, 10, 20]))
+        console.log('typeName' in s, s.typeName)
         s.x = 9
     })
+    a.t(()=>'ダメ'===valk.some(0, ([0, 10, 20])).match('ダメ', 'マア', 'ヨシ'))
+    a.t(()=>'ダメ'===valk.some(0, ([0, 10, 20])).match(()=>'ダメ', ()=>'マア', ()=>'ヨシ'))
+    ;(function(){
+        class C { constructor(v){this._v=v} get v() {return this._v} }
+        const cs = ['ダメ', 'マア', 'ヨシ'].map(v=>new C(v))
+        a.t(()=>'ダメ'===valk.some(0, ([0, 10, 20])).match(...cs.map(c=>c.v)))
+    })();
     a.fin()
 });
 window.addEventListener('beforeunload', (event) => {
