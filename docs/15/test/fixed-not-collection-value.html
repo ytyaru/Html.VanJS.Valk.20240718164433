@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title></title>
+<meta name="description" content="">
+<meta name="author" content="ytyaru">
+<link rel="license" href="https://creativecommons.org/licenses/by-sa/4.0/deed.ja">
+<link rel="icon" href="../asset/image/author/ytyaru.png">
+<link rel="stylesheet" href="css/style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../../lib/van/1.2.6/nomodule.min.js"></script>
+<script src="../../js/footer.js"></script>
+<!--<script src="../../lib/util/assertion.js"></script>-->
+<script src="../../lib/util/array/compare.js"></script>
+<script src="../js/valk.js"></script>
+<script src="type.js"></script>
+<script src="assertion.js"></script>
+<script src="black-box.js"></script>
+<!--<script src="js/main.js"></script>-->
+<script>
+window.addEventListener('DOMContentLoaded', async(event)=>{
+    const a = new Assertion()
+    const bb = new BlackBox(a)
+    const v = valk.fix(0)
+    console.log(v)
+    console.log(v.toString())
+    console.log(Object.entries(v))
+//    a.t(v instanceof Proxy)
+    a.t(v.__type===`Proxy(valk.FixValue)`)
+    a.t(v.v===0)
+    a.e(valk.errors.FixError, `Assignment to fix variable.`, ()=>v.v=1)
+    a.fin()
+})
+</script>
+</head>
+<body>
+    <main></main>
+    <footer></footer>
+</body>
+</html>
+<!-- https://coliss.com/articles/build-websites/operation/work/html-template-for-web-apps-or-sites.html -->
+<!-- https://coliss.com/articles/build-websites/operation/work/html5-template-for-2018.html -->
