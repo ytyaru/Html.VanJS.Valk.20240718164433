@@ -108,8 +108,7 @@ class Type {
             this.#defineMain(fnName, fn) // 正式
             for (let name of abbrs) { this.#defineAbbr(`is${name}`, fn) } // 略名
             // 複数形
-            //const fns = (args)=>Array.isArray(args) && args.every(x=>getter(x))
-            const fns = (args)=>Array.isArray(args) && args.every(x=>fn(x))
+            const fns = (args)=>Array.isArray(args) && args.every(x=>getter(x))
             this.#defineMain(`${fnName}s`, fns) // 複数形
             for (let name of abbrs) { this.#defineAbbr(`is${name}s`, fns) } // 略名
         }
@@ -139,10 +138,6 @@ class Type {
 //    isEmpty(v) { return this.isItr(v) && (0===v.length || 0===v.size) }
 //    isNullOrUndefinedOrEmpty(v) { return this.isNU(v) || this.isEmpty(v) }
 //    isNUE(v) { return this.isNU(v) || this.isEmpty(v) }
-
-    // 実行可能なら引数なしで実行する。不能ならそのまま返す
-    fnV(v) { return this.isFn(v) ? v() : v }
-
     getName(v) {
         if (undefined===v) { return 'Undefined' }
         if (null===v) { return 'Null' }
@@ -157,7 +152,6 @@ class Type {
         if (this.isIns(v)) { return v.constructor.name ? `(Instance ${v.constructor.name})` : `(NoNameClassInstance)` }
         if (this.isAFn(v) || this.isGFn(v) || this.isAGFn(v)) { return v.constructor.name }
         if (this.isObj(v)) { return 'Object' }
-        try { if (Type.isStr(v.typeName)) { return v.typeName } } catch (e) {} // Proxy
         // 上記のいずれかに当てはまることを期待している
         const name = typeof v
         return name[0].toUpperCase() + name.slice(1)
@@ -203,115 +197,6 @@ class Type {
     _hasGS(obj,key,isS) { try { return this.isFn(this._getDesc(obj,key)[(isS ? 's' : 'g')+'et']) } catch(e) {return false} }
     _getDesc(obj,key) { return Object.getOwnPropertyDescriptor(obj, key) }
 
-
-    /*
-    async aWait(fn, ...args) {
-        if ('AsyncFunction'===fn.constructor.name) { return await fn(...args) }
-        else if ('Function'===fn.constructor.name) { return fn(...args) }
-    }
-    async *aWaitGen(fn, ...args) {
-        if ('AsyncGeneratorFunction'===fn.constructor.name) { yield await fn(...args) }
-        else if ('GeneratorFunction'===fn.constructor.name) { yield fn(...args) }
-    }
-    // const res = fetch(url); const txt = res.text(); console.log(txt);
-    // runMethod(fetch(url), (res)=>res.text(), (txt)=>console.log(txt))
-    // Promise.prototype.sync
-    // fetch.sync(url, [(res)=>res.text(), (txt)=>console.log(txt)], catchFn, finallyFn)
-    runMethod(ins, name, args, cbFns) { // getter/setter/method
-        if (Type.isIns(ins)) {
-            if (Type.hasGetter(ins, name)) { return Reflect.get(ins, name) }
-            if (Type.hasSetter(ins, name)) { return Reflect.set(ins, name, args) }
-            if (name in ins) {
-                if (Type.isAFn(ins[name])) { // Promise なら 直列実行する（並列不可）
-                    let promise = ins[name](...args)
-                    for(let i=0; i<cbFns.length; i++) {
-                        promise = promise.then((...res)=>cbFns[i](...res))
-                    }
-                    return promise
-                }
-                if (Type.isFn(ins[name])) { return ins[name](...args).then(r0=>{}) }
-                return ins[name]; // プロパティ
-            }
-        }
-    }
-    run(...args) { // fn / Promise / method / getter / setter を同じ様に実行するラッパー関数
-        if (0===args.length) { throw new Error(`引数は一つ以上必要です。`) }
-        if (1===args.length) {
-            if (Type.isCls(args[0])) { return new args[0]() }
-            if (Type.isFn(args[0])) { return args[0]() }
-            //if (Type.isAFn(args[0])) { return args[0]().then(res=>{}) }
-            if (Type.isAFn(args[0])) { throw new Error(`指定された関数はasyncですが、コールバック関数が指定されていません。`) }
-        }
-        if (2===args.length) {
-            if (Type.isCls(args[0]) && Type.isAry(args[1])) { return new args[0](...args[1]) }
-            if (Type.isIns(args[0]) && Type.isStr(args[1]) && Type.hasGetter(args[0], args[1])) { return Reflect.get(args[0], args[1]) }
-            if (Type.isIns(args[0]) && Type.isFn(args[1]) && Type.hasGetter(args[0], args[1].name)) { return Reflect.get(args[0], args[1].name)
-            //if (Type.isIns(args[0]) && Type.isStr(args[1])) { return args[0][args[1]]() }
-            if (Type.isIns(args[0]) && Type.isStr(args[1])) {
-                const fn = args[0][args[1]]
-//                if (Type.isAFn(fn)) { return fn().then(r0=>{}) }
-                if (Type.isAFn(fn)) { throw new Error(`指定されたメソッドはasyncですが、コールバック関数が指定されていません。`) }
-                if (Type.isFn(fn)) { return fn() }
-            }
-            if (Type.isIns(args[0]) && Type.isFn(args[1])) { return args[0][args[1].name]() }
-            //if (Type.isIns(args[0]) && Type.isAFn(args[1])) { return args[0][args[1].name]().then(r0=>{}) }
-            if (Type.isIns(args[0]) && Type.isAFn(args[1])) { throw new Error(`指定されたメソッドはasyncですが、コールバック関数が指定されていません。`) }
-            if (Type.isAFn(args[0]) && Type.isFn(args[1])) { return args[0]().then((...res)=>{args[1](...res)}) }
-            //if (Type.isAFn(args[0]) && Type.isAFn(args[1])) { return args[0]().then((...r0)=>{args[1](...r0).then(r1=>{})}) }
-            if (Type.isAFn(args[0]) && Type.isAFn(args[1])) { throw new Error(`指定されたコールバック関数はasyncですが、それを受けるコールバック関数が指定されていません。`) }
-            if (Type.isFn(args[0]) && Type.isAry(args[1])) { return args[0](...args[1]) }
-        }
-        if (3===args.length) {
-            if (Type.isIns(args[0]) && Type.isStr(args[1]) && Type.hasSetter(args[0], args[1])) { return Reflect.set(args[0], args[1], args[2]) }
-            if (Type.isIns(args[0]) && Type.isFn(args[1]) && Type.hasSetter(args[0], args[1].name)) { return Reflect.set(args[0], args[1].name, args[2])
-            if (Type.isAFn(args[0]) && Type.isFn(args[1]) && Type.isFn(args[2])) { return args[0]().then(res=>{args[1](res)}) }
-            if (Type.isAFn(args[0]) && Type.isAFn(args[1]) && Type.isFn(args[2])) { return args[0]().then((...r0)=>{args[1](...r0).then((...r1)=>{args[2](...r1)})}) }
-            if (Type.isIns(args[0]) && Type.isStr(args[1]) && Type.isFn(args[2])) {
-                const fn = args[0][args[1]]
-                if (Type.isAFn(fn)) { return fn().then((...res)=>{args[2](...res)}) }
-                else (Type.isAFn(fn)) { throw new Error(`引数が[ins, name, fn]のときnameはinsの非同期メソッド名であるべきです。`) }
-            }
-            if (Type.isIns(args[0]) && Type.isStr(args[1]) && Type.isAry(args[2])) {
-                const fn = args[0][args[1]]
-                if (Type.isFn(fn)) { return fn(...args[2]) }
-                else { throw new Error(`引数が[ins, name, []]のときnameはinsの同期メソッド名であるべきです。`) }
-            }
-//            if (Type.isFn(args[0]) && Type.isAry(args[1])) { return args[0](...args[1]) }
-//            Type.runMethod(ins, name, args, cbFns)
-        }
-        if (4<=args.length) {
-            if (Type.isIns(args[0])) {
-                const name = Type.isStr(args[1]) ? args[1] : (Type.isFn(args[1]) || Type.isAFn(args[1]) ? args[1].name : null)
-                const fn = args[0][name]
-                if (!Type.isFn(fn) && !Type.isAFn(fn)) { throw new Error(`引数が4つ以上あるとき第二引数は第一引数insのもつメソッド名であるべきです。`)}
-                if (!Type.isAry(args[2])) { throw new Error(`引数が4つ以上あるとき第三引数は可変長引数を表す配列であるべきです。`) }
-                const fnArgs = args[2]
-                const cbFns = [...args].slice(3)
-                if (Type.isAFn(fn) && Type.isFn(cbFns)) {
-                    let promise = fn(...fnArgs)
-                    for(let i=0; i<cbFns.length; i++) {
-                        promise = promise.then((...res)=>cbFns[i](...res))
-                    }
-                    return promise
-                }
-                else if (Type.isFn(fn) && Type.isFn(cbFns)) {
-                    let ret = fn(...fnArgs)
-                    for(let i=0; i<cbFns.length; i++) {
-                        ret = cbFns[i](...ret)
-                    }
-                    return ret
-                }
-                if (!Type.isAry(args[2])) { throw new Error(`引数が4つ以上あるとき第四引数以降は関数であるべきです。自分の戻り値が次の関数への引数になります。いわゆるコールバック地獄を呼出順に配列化した構造です。`) }
-            }
-            else if (Type.isAFn(args[0])) {
-
-            }
-            else if (Type.isFn(args[0])) {
-
-            }
-        }
-    }
-    */
 }
 window.Type = new Type()
 String.prototype.capitalize = function(str) { return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase() }
