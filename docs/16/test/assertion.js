@@ -300,7 +300,7 @@ class BoolAssertion extends BaseAssertion {
         // テスト例外。テストコードは最後に真偽値を返してください。
         if (!this.__isBool(bool)) {
             this._count.exception++
-            return this._console('exception', this._M.msg.normal.exception.fnReturn, this._caller)
+            return this._console('fail', this._M.msg.normal.exception.fnReturn, this._caller)
         }
         // テスト失敗：Eであるべき所がAです。
         else if (this._isFalseSuccess ? bool : !bool) {
@@ -404,9 +404,8 @@ class ExceptionAssertion extends BaseAssertion {
         return this._M.msg.exception.runtime.type(type.name, err.constructor.name)
     }
     __eCheckMsgMsg(msg, err) {
-        if (Type.isNU(msg) || ''===msg) { return '' } // null, undefined, ''ならテスト不要
         if (msg instanceof RegExp) {
-            if (msg.test(err.message)) { return '' }
+            if (msg.test(msg)) { return '' }
             // `メッセージが違います。\n期待値: ${msg}\n実際値: ${err.message}`
             return this._M.msg.exception.runtime.msg(msg, err.message)
         }
@@ -473,9 +472,6 @@ class Assertion {
     t(fn) { this._t.assert(fn) }
     f(fn) { this._f.assert(fn) }
     e(type, msg, fn) { this._e.assert(type, msg, fn) }
-//    t(fn) { this._t.assert(fn); if (0 < this.count.pending) {this.fin()}; }
-//    f(fn) { this._f.assert(fn); if (0 < this.count.pending) {this.fin()}; }
-//    e(type, msg, fn) { this._e.assert(type, msg, fn); if (0 < this.count.pending) {this.fin()}; }
     get count() { return this._count }
     fin(onFinishedAsync, onFinishedSync) {
         this._runOnFinished(onFinishedSync, this._M.msg.fin.result.sync) // 同期テスト結果
