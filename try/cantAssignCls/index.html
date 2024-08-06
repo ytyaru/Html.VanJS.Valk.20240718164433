@@ -1,0 +1,32 @@
+<script src="cantAssignCls.js"></script>
+<script>
+window.addEventListener('load', async(e)=>{
+    class C {
+        constructor(v) {this._v = v}
+        set v(v) { this._v = v + 1 }
+        get v() { return this._v }
+    }
+    C = cantAssignCls(C)
+    const c = new C()
+
+    try { const E='クラスに存在しないプロパティへの代入を許してしまった！新しくプロパティが生成されてしまった！'; C.x = E; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの代入禁止: x'===err.message) }
+
+    try { const E='クラスに存在しないプロパティの参照を許してしまった！'; C.x; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの参照禁止: x'===err.message) }
+
+    try { const E='インスタンスに存在しないプロパティへの代入を許してしまった！新しくプロパティが生成されてしまった！'; c.y = E; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの代入禁止: y'===err.message) }
+
+    try { const E='インスタンスに存在しないプロパティの参照を許してしまった！'; c.y; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの参照禁止: y'===err.message) }
+
+    console.assert(c instanceof C)
+    console.assert(undefined===c.v)
+    c.v = 1
+    console.assert(2===c.v)
+    c._v = 3
+    console.assert(3===c.v)
+
+})
+</script>

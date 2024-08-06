@@ -1,0 +1,31 @@
+<script src="cantAssignObj.js"></script>
+<script>
+window.addEventListener('load', async(e)=>{
+    const obj = cantAssignObj({
+        A: {
+            a: {
+                bool: true,
+                int: 1,
+                str: 'A',
+                fn: ()=>true,
+            }
+        },
+        B: 2,
+    })
+
+    try { const E='オブジェクトに存在しないプロパティへの代入を許してしまった！新しくプロパティが生成されてしまった！'; obj.x = E; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの代入禁止: x'===err.message) }
+
+    try { const E='オブジェクトに存在しないプロパティの参照を許してしまった！'; obj.x; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの参照禁止: x'===err.message) }
+
+    console.assert(obj instanceof Object)
+    console.assert('Object'===obj.constructor.name)
+    console.assert(obj.A.a.bool)
+    console.assert(1===obj.A.a.int)
+    console.assert('A'===obj.A.a.str)
+    console.assert('function'===typeof obj.A.a.fn)
+    obj.A.a.int = 2
+    console.assert(2===obj.A.a.int)
+})
+</script>
