@@ -27,6 +27,10 @@ window.addEventListener('load', async(e)=>{
     try { const E='オブジェクトに存在しないプロパティの参照を許してしまった！'; obj.x; console.error(E); }
     catch (err) { console.assert('未定義プロパティへの参照禁止: x'===err.message, err.message) }
 
+    try { const E='オブジェクトに存在するプロパティへの代入を許してしまった！既存プロパティが上書きされてしまった！'; obj.A = E; console.error(E); }
+    catch (err) { console.assert('定義済プロパティへの代入禁止: A'===err.message, err.message) }
+
+
     console.assert(obj instanceof Object)
     console.assert('Object'===obj.constructor.name)
     console.assert(obj.A.a.bool)
