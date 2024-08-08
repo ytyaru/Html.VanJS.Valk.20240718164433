@@ -1,8 +1,50 @@
 <script src="../../../docs/lib/util/type.js"></script>
-<script src="fix.js"></script>
+<script src="../../../docs/lib/util/test/assertion.js"></script>
+<script src="../../../docs/lib/util/test/black-box.js"></script>
+<script src="../../object/1/deepFreeze.js"></script>
 <script src="hook.js"></script>
 <script>
+"use strict";
 window.addEventListener('load', async(e)=>{
+    const a = new Assertion();
+    const bb = new BlackBox();
+    // Hook
+    ;(function(){
+        let changedNum = 0;
+        const o = hook.obj({i:0}, {onChanged:()=>++changedNum})
+        o.i = 1
+        a.t(1===o.i)
+        a.t(1===changedNum)
+    })();
+    ;(function(){
+        let changedNum = 0;
+        const o = hook.obj({i:0}, {onValidate:(t,k,v,r,o)=>'i'===k && (0===v%2), onChanged:()=>++changedNum})
+        a.e(hook.errors.valid, `Invalid value.`, ()=>{o.i = 1})
+        a.t(0===o.i)
+        a.t(0===changedNum)
+        o.i = 2
+        a.t(2===o.i)
+        a.t(1===changedNum)
+    })();
+    ;(function(){
+        const o = hook.obj({i:0}, {onSet:(t,k,v,r,o)=>t[k]=999})
+        o.i = 1
+        a.t(999===o.i)
+    })();
+    ;(function(){
+        let changedNum = 0;
+        const o = hook.obj({i:0}, {onValidate:(t,k,v,r,o)=>false})
+        a.e(hook.errors.valid, `Invalid value.`, ()=>{o.i = 1})
+        a.t(0===o.i)
+    })();
+    ;(function(){
+        let changedNum = 0;
+        const o = hook.obj({i:0}, {onValidate:(t,k,v,r,o)=>false, onSetDefault:(t,k,v,r,o)=>t[k]=999})
+        a.e(hook.errors.valid, `Invalid value.`, ()=>{o.i = 1})
+        a.t(999===o.i)
+    })();
+    a.fin()
+    /*
     // 未定義プロパティへの参照・代入禁止
     // オブジェクト
     const obj = Fix.obj({
@@ -97,5 +139,6 @@ window.addEventListener('load', async(e)=>{
         try { const E='値に存在しないプロパティの参照を許してしまった！'; v.x; console.error(E); }
         catch (err) { console.assert('未定義プロパティへの参照禁止: x'===err.message, err.message) }
     })();
+    */
 })
 </script>

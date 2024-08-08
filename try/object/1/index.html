@@ -1,0 +1,66 @@
+<script src="../../../docs/lib/util/type.js"></script>
+<script src="../../../docs/lib/util/test/assertion.js"></script>
+<script src="../../../docs/lib/util/test/black-box.js"></script>
+<script src="deepFreeze.js"></script>
+<script>
+"use strict";
+// 拡張禁止: Object.preventExtensions
+// 拡張禁止+!configurable(削除禁止+再定義禁止): Object.seal
+// 代入禁止(値の代入禁止): Object.freeze
+window.addEventListener('DOMContentLoaded', async(e)=>{
+    const a = new Assertion();
+    const bb = new BlackBox();
+    ;(function(){
+        let obj = {a: 0}
+        Object.preventExtensions(obj);
+        obj.a = 9;
+        a.e(TypeError, `Cannot add property b, object is not extensible`, ()=>{obj.b = 1})
+    })();
+    ;(function(){
+        let obj = {a: 0}
+        Object.seal(obj);
+        obj.a = 9;
+        a.e(TypeError, `Cannot add property b, object is not extensible`, ()=>{obj.b = 1})
+    })();
+    ;(function(){
+        let obj = {a: 0}
+        Object.freeze(obj);
+        a.e(TypeError, `Cannot assign to read only property 'a' of object '#<Object>'`, ()=>{obj.a = 9})
+    })();
+
+    // 子孫はfreezeしてくれない
+    ;(function(){
+        let obj = {A: {
+            a: 1
+        }}
+        Object.freeze(obj);
+        a.e(TypeError, `Cannot assign to read only property 'A' of object '#<Object>'`, ()=>{obj.A = {b:2}})
+//        a.e(TypeError, `Cannot add property b, object is not extensible`, ()=>{obj.A.b = 9})
+//        a.e(TypeError, `Cannot assign to read only property 'a' of object '#<Object>'`, ()=>{obj.A.a = 9})
+        obj.A.a = 9
+        a.t(9===obj.A.a)
+    })();
+    // 子孫もfreezeする
+    ;(function(){
+        let obj = {A: {
+            a: 1
+        }}
+        Object.deepFreeze(obj);
+        a.e(TypeError, `Cannot assign to read only property 'A' of object '#<Object>'`, ()=>{obj.A = {b:2}})
+        a.e(TypeError, `Cannot add property b, object is not extensible`, ()=>{obj.A.b = 9})
+        a.e(TypeError, `Cannot assign to read only property 'a' of object '#<Object>'`, ()=>{obj.A.a = 9})
+    })();
+    // 子孫もfreezeするが末端はsealにする
+    ;(function(){
+        let obj = {A: {
+            a: 1
+        }}
+        Object.deepFreeze(obj, true);
+        a.e(TypeError, `Cannot assign to read only property 'A' of object '#<Object>'`, ()=>{obj.A = {b:2}})
+        a.e(TypeError, `Cannot add property b, object is not extensible`, ()=>{obj.A.b = 9})
+        obj.A.a = 9
+        a.t(9===obj.A.a)
+    })();
+    a.fin();
+});
+</script>

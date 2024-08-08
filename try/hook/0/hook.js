@@ -1,26 +1,65 @@
 ;(function(){
+class ValidError extends Error { constructor(msg=`Invalid value.`) { super(msg); this.name='ValidError' } }
 const containerClasses = [Array, Set, Object, Map]
 const destroyMethods = {
     Array: 'copyWithin,fill,pop,push,reverse,shift,sort,splice,unshift'.split(','),
     Set: 'add,clear,delete'.split(','),
     Map: 'clear,delete,set'.split(','),
 }
-//class HookObj extends Fix.types.obj {
 class HookObj {
     static of(...args) { return new HookObj(...args) }
-    constructor(obj, options) {
-//        super(obj)
+    constructor(obj, options={}) {
         this._options = {...{
-            onBefore: ()=>{},
-            onValidate: (i)=>true,
-//            onSet: (i,o)=>i,
-//            onSetDefault: (i,o)=>o,
-            onValid: (i,v,o)=>{},
-            onInvalid: (i,v,o)=>{throw new ValidError(`Invalid value.`)},
-            onChanged: (i,v,o)=>{},
-            onUnchanged: (i,v,o)=>{},
-            onAfter: ()=>{},
+            onBefore: (target, key, value, receiver)=>{},
+            onValidate: (target, key, value, receiver)=>true,
+            onSet: (target, key, value, receiver, o)=>{
+                if (Type.hasSetter(target, key)) { return Reflect.set(target, key, value) }
+                else { return (target[key] = value); }
+            },
+            onSetDefault: (target, key, value, receiver, o)=>{},
+            onValid: (target, key, value, receiver, o)=>{},
+            onInvalid: (target, key, value, receiver, o)=>{throw new ValidError(`Invalid value.`)},
+            onChanged: (target, key, value, receiver, o)=>{},
+            onUnchanged: (target, key, value, receiver, o)=>{},
+            onAfter: (target, key, value, receiver, o)=>{},
         }, ...options}
+        //return new Proxy(this, {
+        return new Proxy(obj, {
+            set: (target, key, value, receiver)=>{
+                this._options.onBefore(target, key, value, receiver)
+                //const o = target[key]
+                const o = this.get(target, key, receiver)
+                let r;
+                if (this._options.onValidate(target, key, value, receiver, o)) {
+                    //if (Type.hasSetter(target, key)) { r = Reflect.set(target, key, value) }
+                    //else { r = (target[key] = value); }
+                    //r = (target[key] = this._options.onSet(target, key, value, receiver, o))
+                    r = this._options.onSet(target, key, value, receiver, o)
+                    this._options.onValid(o, target[key])
+                } else {
+                    //r = (target[key] = this._options.onSetDefault(target, key, value, receiver, o))
+                    r = this._options.onSetDefault(target, key, value, receiver, o)
+                    this._options.onInvalid(target, key, value, o)
+                }
+                const n = this.get(target, key, receiver)
+                if (o===n) {this._options.onUnchanged(target, key, value, receiver, o)}
+                else {this._options.onChanged(target, key, value, receiver, o)}
+                //if (o!==target[key]) { this._options.onChanged(target, key, value, receiver, o) }
+                //if (this._isChanged(target, key, value, o)) { this._options.onChanged(target, key, value, receiver, o) }
+//                else { this._options.onUnchanged(target, key, value, receiver, o) }
+                this._options.onAfter(target, key, value, receiver, o)
+                return r
+            },
+            get:(target, key)=>{
+                console.log(target, key)
+                if (key in target) {
+                    if (Type.hasGetter(target, key)) { return Reflect.get(target, key) } // getter
+                    if (Type.isFn(target[key])) { return target[key].bind(target) } // method, constructor?
+                    return target[key] // field
+                }
+                throw new TypeError(`未定義プロパティへの参照禁止: ${key}`)
+            },
+        })
         //return super.obj(obj, 'key', false, 'key', this._getHandler({...this._getSetHandler((target, key, value, receiver)=>{
         return Fix.obj(obj, 'key', false, 'key', this._getHandler({...this._getSetHandler((target, key, value, receiver)=>{
         //return new Proxy(obj, this._getHandler({...this._getSetHandler((target, key, value, receiver)=>{
@@ -35,6 +74,13 @@ class HookObj {
             else { this._options.onUnchanged() }
             return r
         })}))
+    }
+    get(target, key, receiver) {
+        if (key in target) {
+            if (Type.hasGetter(target, key)) { return Reflect.get(target, key) } // getter
+            if (Type.isFn(target[key])) { return target[key].bind(target) } // method, constructor?
+            return target[key] // field
+        }
     }
 }
 const HookableContainer = superClass => class extends superClass {
@@ -169,7 +215,6 @@ class HookVal {
         this._options.onAfter(this._i, this._v, this._o)
     }
 }
-*/
 window.hook = Fix.obj({
     val: (...args)=>HookVal.of(...args),
     obj: (...args)=>HookObj.of(...args),
@@ -177,4 +222,19 @@ window.hook = Fix.obj({
     set: (...args)=>HookSet.of(...args),
     map: (...args)=>HookMap.of(...args),
 }, 'val', false, 'val')
+*/
+window.hook = Object.deepFreeze({
+    val: (...args)=>HookVal.of(...args),
+    obj: (...args)=>HookObj.of(...args),
+    ary: (...args)=>HookAry.of(...args),
+    set: (...args)=>HookSet.of(...args),
+    map: (...args)=>HookMap.of(...args),
+    types: {
+        obj: HookObj,
+    },
+    errors: {
+        valid: ValidError,
+    }
+})
 })();
+

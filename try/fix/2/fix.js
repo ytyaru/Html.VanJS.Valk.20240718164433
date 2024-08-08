@@ -44,7 +44,7 @@ class FixVal extends Fix {
 class FixObj extends Fix {
     obj(o, level='val', withoutChildren=false, leafLevel='key', handler={}) { // level: 'val' or 'key'
         if ('Object'!==o.constructor.name) { throw new TypeError(`第一引数はオブジェクトであるべきです。`) }
-        if (![level, leafLevel].every(L=>'key,val'.split(',').some(l=>l===L))) { throw new TypeError(`第二,四引数は'key','val'のいずれかであるべきです。\n'key'は未定義プロパティへの参照・代入禁止です。\n'val'はそれに加えて定義済プロパティへの代入禁止です。`) }
+        if (![level, leafLevel].every(L=>'key,val'.split(',').some(l=>l===L))) { throw new TypeError(`第二,四引数は'key','val'のいずれかであるべきです。\n'key'は未定義プロパティへの参照・代入禁止です。\n'val'はそれに加えて定義済プロパティへの代入禁止です。: ${level}, ${leafLevel}`) }
         this._level = level;
         this._leafLevel = leafLevel;
         this._hander = handler
