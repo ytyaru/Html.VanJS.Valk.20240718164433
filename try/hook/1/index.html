@@ -1,0 +1,202 @@
+<script src="../../../docs/lib/util/type.js"></script>
+<script src="../../../docs/lib/util/test/assertion.js"></script>
+<script src="../../../docs/lib/util/test/black-box.js"></script>
+<script src="../../object/1/deepFreeze.js"></script>
+<script src="ins-proxy.js"></script>
+<script src="hook.js"></script>
+<script>
+"use strict";
+window.addEventListener('load', async(e)=>{
+    const a = new Assertion();
+    const bb = new BlackBox();
+    // Hook
+    // hook.val
+    ;(function(){
+        const o = hook.val(0)
+        o.v = 1
+        a.t(1===o.v)
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>o.x=1)
+    })();
+    ;(function(){
+        const o = hook.val(0, {onValidate:(i,v,o)=>0===i%2})
+        o.v = 1
+        a.t(0===o.v)
+        o.v = 2
+        a.t(2===o.v)
+    })();
+    ;(function(){
+        let changedNum = 0;
+        const o = hook.val(0, {onChanged:()=>++changedNum})
+        o.v = 1
+        a.t(1===o.v)
+        a.t(1===changedNum)
+        o.v = 1
+        a.t(1===o.v)
+        a.t(1===changedNum)
+        o.v = 5
+        a.t(5===o.v)
+        a.t(2===changedNum)
+    })();
+    ;(function(){
+        const o = hook.val(0, {onSet:()=>9})
+        o.v = 1
+        a.t(9===o.v)
+    })();
+    ;(function(){
+        let count = 0;
+        const o = hook.val(0, {onValid:()=>++count})
+        o.v = 1
+        a.t(1===o.v)
+        a.t(1===count)
+    })();
+    ;(function(){
+        const o = hook.val(0, {onValidate:()=>false, onSetDefault:()=>9})
+        o.v = 1
+        a.t(9===o.v)
+    })();
+    ;(function(){
+        let count = 0;
+        const o = hook.val(0, {onValidate:()=>false, onInvalid:()=>++count})
+        o.v = 1
+        a.t(0===o.v)
+        a.t(1===count)
+    })();
+
+
+
+
+
+    // hook.obj
+    ;(function(){
+        let changedNum = 0;
+        const o = hook.obj({i:0}, {onChanged:()=>++changedNum})
+        o.i = 1
+        a.t(1===o.i)
+        a.t(1===changedNum)
+    })();
+    ;(function(){
+        let changedNum = 0;
+        const o = hook.obj({i:0}, {onValidate:(t,k,v,r,o)=>'i'===k && (0===v%2), onChanged:()=>++changedNum})
+        a.e(hook.errors.valid, `Invalid value.`, ()=>{o.i = 1})
+        a.t(0===o.i)
+        a.t(0===changedNum)
+        o.i = 2
+        a.t(2===o.i)
+        a.t(1===changedNum)
+    })();
+    ;(function(){
+        const o = hook.obj({i:0}, {onSet:(t,k,v,r,o)=>t[k]=999})
+        o.i = 1
+        a.t(999===o.i)
+    })();
+    ;(function(){
+        let changedNum = 0;
+        const o = hook.obj({i:0}, {onValidate:(t,k,v,r,o)=>false})
+        a.e(hook.errors.valid, `Invalid value.`, ()=>{o.i = 1})
+        a.t(0===o.i)
+    })();
+    ;(function(){
+        let changedNum = 0;
+        const o = hook.obj({i:0}, {onValidate:(t,k,v,r,o)=>false, onSetDefault:(t,k,v,r,o)=>t[k]=999})
+        a.e(hook.errors.valid, `Invalid value.`, ()=>{o.i = 1})
+        a.t(999===o.i)
+    })();
+    a.fin()
+    /*
+    // 未定義プロパティへの参照・代入禁止
+    // オブジェクト
+    const obj = Fix.obj({
+        A: {
+            a: {
+                bool: true,
+                int: 1,
+                str: 'A',
+                fn: ()=>true,
+            }
+        },
+        B: 2,
+    })
+    console.log(obj)
+
+    try { const E='オブジェクトに存在しないプロパティへの代入を許してしまった！新しくプロパティが生成されてしまった！'; obj.x = E; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの代入禁止: x'===err.message, err.message) }
+
+    try { const E='オブジェクトに存在しないプロパティの参照を許してしまった！'; obj.x; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの参照禁止: x'===err.message, err.message) }
+
+    try { const E='オブジェクトに存在するプロパティへの代入を許してしまった！既存プロパティが上書きされてしまった！'; obj.A = E; console.error(E); }
+    catch (err) { console.assert('定義済プロパティへの代入禁止: A'===err.message, err.message) }
+
+    console.assert(obj instanceof Object)
+    console.assert('Object'===obj.constructor.name)
+    console.assert(obj.A.a.bool)
+    console.assert(1===obj.A.a.int)
+    console.assert('A'===obj.A.a.str)
+    console.assert('function'===typeof obj.A.a.fn)
+    obj.A.a.int = 2
+    console.assert(2===obj.A.a.int)
+
+
+
+    // クラス
+    class C {
+        static sm() { return 1 }
+        constructor(v) {this._v = v}
+        set v(v) { this._v = v + 1 }
+        get v() { return this._v }
+    }
+    C = Fix.cls(C)
+    const c = new C()
+
+    try { const E='クラスに存在しないプロパティへの代入を許してしまった！新しくプロパティが生成されてしまった！'; C.x = E; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの代入禁止: x'===err.message, err.message) }
+
+    try { const E='クラスに存在しないプロパティの参照を許してしまった！'; C.x; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの参照禁止: x'===err.message, err.message) }
+
+    try { const E='クラスに存在するプロパティへの代入を許してしまった！プロパティが上書きされてしまった！'; C.sm = E; console.error(E); }
+    catch (err) { console.assert('定義済プロパティへの代入禁止: sm'===err.message, err.message) }
+
+    try { const E='インスタンスに存在しないプロパティへの代入を許してしまった！新しくプロパティが生成されてしまった！'; c.y = E; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの代入禁止: y'===err.message, err.message) }
+
+    try { const E='インスタンスに存在しないプロパティの参照を許してしまった！'; c.y; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの参照禁止: y'===err.message, err.message) }
+
+    console.assert(c instanceof C)
+    console.assert(undefined===c.v)
+    c.v = 1
+    console.assert(2===c.v)
+    c._v = 3
+    console.assert(3===c.v)
+
+
+    // 値
+    ;(function(){
+        const v = Fix.val(1)
+        console.assert(1===v.v)
+        try { const E='定義済プロパティへの代入を許してしまった！'; v.v = 2; console.error(E); }
+        catch (err) { console.assert('定義済プロパティへの代入禁止: v'===err.message, err.message) }
+
+        try { const E='値に存在しないプロパティへの代入を許してしまった！新しくプロパティが生成されてしまった！'; v.x = E; console.error(E); }
+        catch (err) { console.assert('未定義プロパティへの代入禁止: x'===err.message, err.message) }
+
+        try { const E='値に存在しないプロパティの参照を許してしまった！'; v.x; console.error(E); }
+        catch (err) { console.assert('未定義プロパティへの参照禁止: x'===err.message, err.message) }
+    })();
+
+    ;(function(){
+        const v = Fix.val(1, 'key')
+        console.assert(1===v.v)
+        v.v = 2
+        console.assert(2===v.v)
+
+        try { const E='値に存在しないプロパティへの代入を許してしまった！新しくプロパティが生成されてしまった！'; v.x = E; console.error(E); }
+        catch (err) { console.assert('未定義プロパティへの代入禁止: x'===err.message, err.message) }
+
+        try { const E='値に存在しないプロパティの参照を許してしまった！'; v.x; console.error(E); }
+        catch (err) { console.assert('未定義プロパティへの参照禁止: x'===err.message, err.message) }
+    })();
+    */
+})
+</script>
