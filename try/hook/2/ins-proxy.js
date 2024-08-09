@@ -3,7 +3,8 @@ class InsProxy { // class の instance を保護するのはObject.sealでは無
     constructor(target, permission) {
         this._permission = {
             getUndefined: false,
-            setDefined: false,
+            //setDefined: false,
+            setDefined: true,
             setUndefined: false,
             ...permission,
         }
@@ -29,6 +30,7 @@ class InsProxy { // class の instance を保護するのはObject.sealでは無
                 } else {
                     if (this._permission.setUndefined) { target[key] = value }
                     else { throw new TypeError(`未定義プロパティへの代入禁止: ${key}`) } }
+                return true // TypeError: 'set' on proxy: trap returned falsish for property '_v'
             },
         })
     }

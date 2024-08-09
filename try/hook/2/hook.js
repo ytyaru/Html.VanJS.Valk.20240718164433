@@ -1,45 +1,11 @@
 ;(function(){
+;InsProxy; // 依存クラス
 class ValidError extends Error { constructor(msg=`Invalid value.`) { super(msg); this.name='ValidError' } }
 const containerClasses = [Array, Set, Object, Map]
 const destroyMethods = {
     Array: 'copyWithin,fill,pop,push,reverse,shift,sort,splice,unshift'.split(','),
     Set: 'add,clear,delete'.split(','),
     Map: 'clear,delete,set'.split(','),
-}
-class InsProxy { // class の instance を保護するのはObject.sealでは無理。getterまで弾かれる。のでProxyで代用する
-    static of(target, options) { return new InsProxy(target, options) }
-    constructor(target, permission) {
-        this._permission = {
-            getUndefined: false,
-            setDefined: false,
-            setUndefined: false,
-            ...permission,
-        }
-//        return Object.seal(this) // getter まで弾いてしまう…
-        return new Proxy(target, { // getter, setter を受け付ける
-            get:(target, key)=>{
-                if (key in target) {
-                    if (Type.hasGetter(target, key)) { return Reflect.get(target, key) } // getter
-                    else if ('function'===target[key]) { return target[key].bind(target) } // method, constructor
-                    else { return target[key] } // field
-                } else {
-                    if (this._permission.getUndefined) { return target[key] }
-                    else { throw new TypeError(`未定義プロパティへの参照禁止: ${key}`) }
-                }
-            },
-            set:(target, key, value, receiver)=>{
-                console.log(target, key, key in target, Type.hasSetter(target, key))
-                if (key in target) {
-                    if (this._permission.setDefined) {
-                        if (Type.hasSetter(target, key)) { return Reflect.set(target, key, value) } // setter
-                        else { target[key] = value } // field
-                    } else { throw new TypeError(`定義済プロパティへの代入禁止: ${key}`) }
-                } else {
-                    if (this._permission.setUndefined) { target[key] = value }
-                    else { throw new TypeError(`未定義プロパティへの代入禁止: ${key}`) } }
-            },
-        })
-    }
 }
 class HookVal {
     static of(...args) { return new HookVal(...args) }
@@ -59,7 +25,8 @@ class HookVal {
             onAfter: ()=>{},
         }, ...options}
 //        return Object.seal(this) // getter まで弾いてしまう…
-        return InsProxy.of(this, {setDefined:true})
+//        return InsProxy.of(this, {setDefined:true})
+        return InsProxy.of(this)
     }
     get i( ) { return this._i }
     get v( ) { return this._v }
@@ -294,6 +261,11 @@ window.hook = Fix.obj({
     map: (...args)=>HookMap.of(...args),
 }, 'val', false, 'val')
 */
+
+
+//[HookVal, HookObj, HookAry, HookSet, HookMap].map(cls=>Object.freeze(cls))
+[HookVal, HookObj, HookAry, HookSet, HookMap].map(cls=>[cls.name.replace('Hook').toLowerCase(), Object.freeze(cls)])
+/*
 window.hook = Object.deepFreeze({
     val: (...args)=>HookVal.of(...args),
     obj: (...args)=>HookObj.of(...args),
@@ -307,5 +279,18 @@ window.hook = Object.deepFreeze({
         valid: ValidError,
     }
 })
+*/
+window.hook = Object.deepFreeze({
+    val: (...args)=>HookVal.of(...args),
+    obj: (...args)=>HookObj.of(...args),
+    ary: (...args)=>HookAry.of(...args),
+    set: (...args)=>HookSet.of(...args),
+    map: (...args)=>HookMap.of(...args),
+    types: Object.assign(...[HookVal, HookObj, HookAry, HookSet, HookMap].map(cls=>[cls.name.replace('Hook').toLowerCase(), Object.freeze(cls)]).map(([k,v])=>({[k]:v}))),
+    errors: {
+        valid: ValidError,
+    }
+})
+
 })();
 

@@ -9,6 +9,127 @@
 window.addEventListener('load', async(e)=>{
     const a = new Assertion();
     const bb = new BlackBox();
+    // InsProxy
+    ;(function(){
+        class C {
+            constructor(v) { this._v = v; return InsProxy.of(this) }
+            get v() { return this._v }
+            set v(v) { this._v = v + 1 }
+        }
+        const c = new C()
+        c._v = 0
+        a.t(0===c._v)
+        a.t(0===c.v)
+        c.v = 1
+        console.log(c.v, c._v)
+        a.t(2===c.v)
+        a.t(2===c._v)
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>c.x=0)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>c.x)
+    })();
+    ;(function(){
+        class C {
+            constructor(v) { this._v = v; return InsProxy.of(this, {setDefined:false}) }
+            get v() { return this._v }
+            set v(v) { this._v = v + 1 }
+        }
+        const c = new C()
+        a.e(TypeError, '定義済プロパティへの代入禁止: v', ()=>c.v=0)
+        a.e(TypeError, '定義済プロパティへの代入禁止: _v', ()=>c._v=0)
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>c.x=0)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>c.x)
+    })();
+    ;(function(){
+        class C {
+            #v=0;
+            constructor(v) { this.#v = v; return InsProxy.of(this) }
+            get v() { return this.#v }
+            set v(v) { this.#v = v + 1 }
+        }
+        const c = new C()
+//        c.#v = 0; // SyntaxError: Private field '#v' must be declared in an enclosing class
+        //a.e(SyntaxError, `Private field '#v' must be declared in an enclosing class`, ()=>c.#v=0)
+//        a.t(0===c.#v)
+        console.log(c.v)
+        a.t(undefined===c.v)
+        c.v = 1
+//        console.log(c.v, c.#v)
+        a.t(2===c.v)
+//        a.t(2===c.#v)
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>c.x=0)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>c.x)
+    })();
+    ;(function(){
+        class C {
+            #v=0;
+            constructor(v) { this.#v = v; return InsProxy.of(this) }
+            get v() { return this.#v }
+            set v(v) { this.#v = v + 1 }
+        }
+//        class D extends C { constructor(v) { super(v); this.#v = 0; } } // SyntaxError: Private field '#v' must be declared in an enclosing class
+    })();
+    ;(function(){
+        class C {
+            constructor(v) { this._v = v; return InsProxy.of(this) }
+            get v() { return this._v }
+            set v(v) { this._v = v + 1 }
+        }
+        class D extends C { constructor(v) { super(v); super._v = 0; } }
+        const c = new C()
+        c._v = 0
+        a.t(0===c._v)
+        a.t(0===c.v)
+        c.v = 1
+        console.log(c.v, c._v)
+        a.t(2===c.v)
+        a.t(2===c._v)
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>c.x=0)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>c.x)
+
+        const d = new D()
+        a.t(0===d._v)
+        a.t(0===d.v)
+        c.v = 1
+        console.log(d.v, d._v)
+        a.t(0===d.v)  // getter, setter は 継承されない！ので初期値のまま…
+        a.t(0===d._v) // getter, setter は 継承されない！ので初期値のまま…
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>d.x=0)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>d.x)
+    })();
+    ;(function(){
+        class C {
+            constructor(v) { this._v = v; return InsProxy.of(this) }
+            get v() { return this._v }
+            set v(v) { this._v = v + 1 }
+        }
+        class D extends C {
+            constructor(v) { super(v); super._v = 0; }
+            get v() { return super.v } // いちいち再定義しないと継承されない…
+            set v(v) { super.v = v }   // いちいち再定義しないと継承されない…
+        }
+        const c = new C()
+        c._v = 0
+        a.t(0===c._v)
+        a.t(0===c.v)
+        c.v = 1
+        console.log(c.v, c._v)
+        a.t(2===c.v)
+        a.t(2===c._v)
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>c.x=0)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>c.x)
+
+        const d = new D()
+        a.t(0===d._v)
+        a.t(0===d.v)
+        c.v = 1
+        console.log(d.v, d._v)
+        a.t(0===d.v)  // getter, setter は 継承されない！ので初期値のまま…
+        a.t(0===d._v) // getter, setter は 継承されない！ので初期値のまま…
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>d.x=0)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>d.x)
+
+    })();
+       
     // Hook
     // hook.val
     ;(function(){
@@ -61,8 +182,46 @@ window.addEventListener('load', async(e)=>{
         a.t(0===o.v)
         a.t(1===count)
     })();
-
-
+    ;(function(){
+        let count = 0;
+        const o = hook.val(0, {onChanged:()=>++count})
+        o.v = 1
+        a.t(1===o.v)
+        a.t(1===count)
+        o.v = 1
+        a.t(1===o.v)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const o = hook.val(0, {onUnchanged:()=>++count})
+        o.v = 1
+        a.t(1===o.v)
+        a.t(0===count)
+        o.v = 1
+        a.t(1===o.v)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const o = hook.val(0, {onBefore:()=>++count})
+        o.v = 1
+        a.t(1===o.v)
+        a.t(1===count)
+        o.v = 1
+        a.t(1===o.v)
+        a.t(2===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const o = hook.val(0, {onAfter:()=>++count})
+        o.v = 1
+        a.t(1===o.v)
+        a.t(1===count)
+        o.v = 1
+        a.t(1===o.v)
+        a.t(2===count)
+    })();
 
 
 
@@ -73,6 +232,19 @@ window.addEventListener('load', async(e)=>{
         o.i = 1
         a.t(1===o.i)
         a.t(1===changedNum)
+        o.i = 1
+        a.t(1===o.i)
+        a.t(1===changedNum)
+    })();
+    ;(function(){
+        let count = 0;
+        const o = hook.obj({i:0}, {onUnchanged:()=>++count})
+        o.i = 1
+        a.t(1===o.i)
+        a.t(0===count)
+        o.i = 1
+        a.t(1===o.i)
+        a.t(1===count)
     })();
     ;(function(){
         let changedNum = 0;
@@ -100,6 +272,20 @@ window.addEventListener('load', async(e)=>{
         const o = hook.obj({i:0}, {onValidate:(t,k,v,r,o)=>false, onSetDefault:(t,k,v,r,o)=>t[k]=999})
         a.e(hook.errors.valid, `Invalid value.`, ()=>{o.i = 1})
         a.t(999===o.i)
+    })();
+    ;(function(){
+        let count = 0;
+        const o = hook.obj({i:0}, {onBefore:()=>++count})
+        o.i = 1
+        a.t(1===o.i)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const o = hook.obj({i:0}, {onAfter:()=>++count})
+        o.i = 1
+        a.t(1===o.i)
+        a.t(1===count)
     })();
     a.fin()
     /*
