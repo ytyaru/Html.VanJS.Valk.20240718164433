@@ -44,7 +44,10 @@ class Type {
                 if (this.isObj(v)) return false   // Object
                 //if (this.isItr(v)) return false   // Iterator
                 //if ('Object'===v.constructor.name) return false   // Object
-                return this.isCls(c) ? c===v.constructor : true // cがあるときはそのクラスのインスタンスであるか確認する
+                //return this.isCls(c) ? c===v.constructor : true // cがあるときはそのクラスのインスタンスであるか確認する
+                //return this.isCls(c) ? v instanceof c : true // cがあるときはそのクラスのインスタンスであるか確認する
+                //return undefined===c ? true : v instanceof c; // cがあるときはそのクラスのインスタンスであるか確認する
+                return ((undefined===c) ? true : (v instanceof c)); // cがあるときはそのクラスのインスタンスであるか確認する
             }]],
             ['ErrorClass', [['ErrCls'], (v)=>Error===v||Error.isPrototypeOf(v)]], // Error.isPrototypeOf(TypeError)
             //['ErrorClass', [['ErrCls'], (v)=>this.isCls(v) && (Error===v||Error.isPrototypeOf(v))]], // Error.isPrototypeOf(TypeError)
@@ -126,7 +129,7 @@ class Type {
     }
     #defineAbbr(name, getter) {
         Object.defineProperty(this, name, {
-            value: (v)=>getter(v),
+            value: (...args)=>getter(...args),
             writable: false,
             enumerable: false,
             configurable: false,
@@ -176,6 +179,44 @@ class Type {
         // 上記のいずれかに当てはまることを期待している
         const name = typeof v
         return name[0].toUpperCase() + name.slice(1)
+    }
+    toStr(x) { return JSON.stringify(x, (k,v)=>ifel(
+    //toStr(x) { console.log(this.getName(x), this.isIns(x, Set), this.isIns(x, Array), (x instanceof Array), (x instanceof Set), this.isCls(Array), this.isCls(Set)); return JSON.stringify(x, (k,v)=>ifel(
+        (this.isBool(v) || this.isInt(v) || this.isFloat(v)), v,
+        this.isErrCls(v), ()=>v.constructor.name,
+        this.isErrIns(v), ()=>`${v.name}(${v.message})`,
+//        (v instanceof Array), ()=>'['+v.map(V=>this.toStr(V)).join(',')+']',
+//        (v instanceof Set), ()=>[...v.values()].map(V=>this.toStr(V)),
+//        (v instanceof Map), ()=>[...v.entries()].map(([K,V])=>`k:`+this.toStr(V)).join(','),
+        this.isIns(v, Array), ()=>'['+v.map(V=>this.toStr(V)).join(',')+']',
+        this.isIns(v, Map), ()=>[...v.entries()].map(([K,V])=>`k:`+this.toStr(V)).join(','),
+        this.isIns(v, Set), ()=>[...v.values()].map(V=>this.toStr(V)),
+        this.isFn(v), ()=>v.toString(),
+        this.isCls(v), ()=>v.toString(),
+        v))
+    /*
+        this.isStr(v), ()=>v,
+        (this.isBool(v) || this.isInt(v) || this.isFloat(v)), JSON.rawJSON(v),
+        this.isErrCls(v), ()=>JSON.rawJSON(v.constructor.name),
+        this.isErrIns(v), ()=>JSON.rawJSON(`${v.name}(${v.message})`),
+//        (v instanceof Array), ()=>'['+v.map(V=>this.toStr(V)).join(',')+']',
+//        (v instanceof Set), ()=>[...v.values()].map(V=>this.toStr(V)),
+//        (v instanceof Map), ()=>[...v.entries()].map(([K,V])=>`k:`+this.toStr(V)).join(','),
+        this.isIns(v, Array), ()=>JSON.rawJSON('['+v.map(V=>this.toStr(V)).join(',')+']'),
+        this.isIns(v, Map), ()=>JSON.rawJSON([...v.entries()].map(([K,V])=>`k:`+this.toStr(V)).join(',')),
+        this.isIns(v, Set), ()=>JSON.rawJSON([...v.values()].map(V=>this.toStr(V))),
+        this.isFn(v), ()=>JSON.rawJSON(v.toString()),
+        this.isCls(v), ()=>JSON.rawJSON(v.toString()),
+        JSON.rawJSON(v)))
+    */
+        /*
+        if (this.isObj(v)) {
+//            console.log(v, [...Object.entries(v)])
+            return [...Object.entries(v)].reduce((str,kv)=>{
+                str += kv[0] + ':' + this.toStr(v)
+            }, '')
+        } else { return v.toString() }
+        */
     }
     to(type, ...values) { // boxing  value:型変換したい値, type:型名(typeof)
         switch(type.toLowerCase()) {
