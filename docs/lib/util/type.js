@@ -180,7 +180,10 @@ class Type {
         const name = typeof v
         return name[0].toUpperCase() + name.slice(1)
     }
-    toStr(x) { return JSON.stringify(x, (k,v)=>ifel(
+    toStr(x) {
+        if (!this.isObj(x) && !this.isAry(x)) { x = {x:x} }
+        return JSON.stringify(x, (k,v)=>ifel(
+    //toStr(x) { return JSON.stringify(x, (k,v)=>ifel(
     //toStr(x) { console.log(this.getName(x), this.isIns(x, Set), this.isIns(x, Array), (x instanceof Array), (x instanceof Set), this.isCls(Array), this.isCls(Set)); return JSON.stringify(x, (k,v)=>ifel(
         (this.isBool(v) || this.isInt(v) || this.isFloat(v)), v,
         this.isErrCls(v), ()=>v.constructor.name,
@@ -258,7 +261,8 @@ class Type {
     _hasS(obj,key) { return this._hasGS(obj,key,true) }
     _hasGS(obj,key,isS) { try { return this.isFn(this._getDesc(obj,key)[(isS ? 's' : 'g')+'et']) } catch(e) {return false} }
     _getDesc(obj,key) { return Object.getOwnPropertyDescriptor(obj, key) }
-
+    getGetter(obj,key) { return obj.__lookupGetter__(key) ?? Object.getOwnPropertyDescriptor(obj, key).get }
+    getSetter(obj,key) { return obj.__lookupSetter__(key) ?? Object.getOwnPropertyDescriptor(obj, key).set }
 
     /*
     async aWait(fn, ...args) {
