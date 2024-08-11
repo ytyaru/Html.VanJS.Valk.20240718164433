@@ -99,7 +99,12 @@ const HookableContainer = superClass => class extends superClass {
 //    constructor(...args) {
 //        super(...args)
     constructor(v, options={}, insOpts={}) {
-        if ([Set,Map].some(c=>c===superClass)) { super(v) }
+        if (Set===superClass) { super(v) }
+        else if (Map===superClass) {
+            if (Type.isObj(v)) { super(Object.entries(v)) }
+            else { super(v) }
+        }
+//        if ([Set,Map].some(c=>c===superClass)) { super(v) }
         else if (Array.isArray(v)) { super(...v) }
         else { super(v) } // 想定外
         this._options = {...{
@@ -124,14 +129,20 @@ const HookableContainer = superClass => class extends superClass {
             Object.defineProperty(this, name, {
                 value:(...args)=>{
                     this._options.onBefore()
-                    const o = this
+                    //const o = this
+                    const o = Type.toStr(this) // ディープコピー（全文字列化）
                     let r;
                     ifel(this._options.onValidate(o, name, args), 
                         ()=>{ r = super[name](...args);
                             this._options.onValid(o, this); },
                         ()=>this._options.onInvalid(o, name, args))
-                    console.log(this._isChanged(o), o, this)
-                    ifel(this._isChanged(o), ()=>this._options.onChanged(), ()=>this._options.onUnchanged())
+                    //console.log(this._isChanged(o), o, this)
+                    //ifel(this._isChanged(o), ()=>this._options.onChanged(), ()=>this._options.onUnchanged())
+                    //ifel(Type.eq(o, this), ()=>this._options.onUnchanged(), ()=>this._options.onChanged())
+//                    console.log(o, this)
+//                    console.log(Type.eq(o, this))
+                    const n = Type.toStr(this) // ディープコピー（全文字列化）
+                    ifel(o===n, ()=>this._options.onUnchanged(), ()=>this._options.onChanged())
                     this._options.onAfter()
                     return r
                 },
@@ -176,7 +187,7 @@ window.hook = Object.deepFreeze({
     ary: (v, options={}, insOpts={})=>new HookAry(v, options, insOpts),
     set: (v, options={}, insOpts={})=>new HookSet(v, options, insOpts),
     map: (v, options={}, insOpts={})=>new HookMap(v, options, insOpts),
-    types: Object.assign(...[HookVal, HookObj, HookAry, HookSet, HookMap].map(cls=>[cls.name.replace('Hook').toLowerCase(), Object.freeze(cls)]).map(([k,v])=>({[k]:v}))),
+    types: Object.assign(...[HookVal, HookObj, HookAry, HookSet, HookMap].map(cls=>[cls.name.replace('Hook','').toLowerCase(), Object.freeze(cls)]).map(([k,v])=>({[k]:v}))),
     errors: {
         valid: ValidError,
     }

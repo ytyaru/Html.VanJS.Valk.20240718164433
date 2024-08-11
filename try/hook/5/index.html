@@ -294,6 +294,9 @@ window.addEventListener('load', async(e)=>{
     ;(function(){
         let count = 0;
         const l = hook.ary([], {onChanged:()=>++count})
+        console.log(hook.types)
+        a.t(Type.isIns(l, hook.types.ary))
+        a.t(l instanceof hook.types.ary)
         l.push(3)
         a.t(1===l.length)
         a.t(3===l[0])
@@ -337,6 +340,7 @@ window.addEventListener('load', async(e)=>{
     // hook.set
     ;(function(){
         const s = hook.set([2,4,6])
+        a.t(Type.isIns(s, hook.types.set))
         s.clear()
         s.add(2)
         s.add(4)
@@ -377,9 +381,57 @@ window.addEventListener('load', async(e)=>{
         a.t(1===count)
     })();
     ;(function(){
+        let count = 0;
+        const s = hook.set([], {onUnchanged:()=>++count})
+        s.add(1)
+        a.t(1===s.size)
+        a.t(0===count)
+        s.add(1)
+        a.t(1===s.size)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const s = hook.set([], {onBefore:()=>++count})
+        s.add(1)
+        a.t(1===s.size)
+        a.t(1===count)
+        s.add(1)
+        a.t(1===s.size)
+        a.t(2===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const s = hook.set([], {onAfter:()=>++count})
+        s.add(1)
+        a.t(1===s.size)
+        a.t(1===count)
+        s.add(1)
+        a.t(1===s.size)
+        a.t(2===count)
+    })();
+    ;(function(){
         const s = hook.set([2,4,6])
         const A = [...s.values()]
         a.t([2,4,6].every((v,i)=>v===A[i]))
+    })();
+
+    // hook.map
+    ;(function(){
+        const m = hook.map({a:0, b:1, c:2})
+        const ks = [...m.keys()]
+        const vs = [...m.values()]
+        a.t(Type.isIns(m, hook.types.map))
+        a.t('a,b,c'.split(',').every((v,i)=>v===[...m.keys()][i]))
+        a.t([0,1,2].every((v,i)=>v===[...m.values()][i]))
+    })();
+    ;(function(){
+        const m = hook.map({a:0, b:1, c:2}, {onValidate:()=>})
+        const ks = [...m.keys()]
+        const vs = [...m.values()]
+        a.t(Type.isIns(m, hook.types.map))
+        a.t('a,b,c'.split(',').every((v,i)=>v===[...m.keys()][i]))
+        a.t([0,1,2].every((v,i)=>v===[...m.values()][i]))
     })();
 
 
