@@ -63,28 +63,13 @@ class InsProxy { // class の instance を保護するのはObject.sealでは無
             onGetDefined:(target, key, receiver)=>{
                 console.log('onGetDefined:', key, target)
                 console.log()
-                // Reflect.get()だとprivate(#)変数の参照・代入で例外発生する
-                // TypeError: Cannot write private member #v to an object whose class did not declare it
-                //if (Type.hasGetter(target, key)) { return Reflect.get(target, key, receiver) } // getter
-                //if (Type.hasGetter(target, key)) { return target[key]() } // getter
-                //if (Type.hasGetter(target, key)) { return Type.getGetter(target,key)() } // getter
-//                if (Type.hasGetter(target, key)) { console.log(key);return Type.getGetter(target,key).apply(target) } // getter
-//                if (Type.hasGetter(target, key)) { return target[key]() } // getter
                 if (Type.hasGetter(target, key)) { return Reflect.get(target, key) } // getter
-                //else if ('function'===target[key]) { return target[key].bind(target) } // method, constructor
-                else if ('function'===target[key]) { return target[key].bind(Type.getOwner(key, target)) } // method, constructor
-                /*
-                else if ('function'===typeof target[key]) {
-                    const owner = Type.getOwner(key, target)
-                    console.log('owner:', owner)
-                    return owner[key].bind(owner)
-                } // method, constructor
-                */
+                else if ('function'===target[key]) { return target[key].bind(target) } // method, constructor
                 else { return target[key] } // field
             },
             onGetUndefined:(target, key, receiver)=>{
                 console.log('onGetUndefined:', key, target)
-                if ('prototype'===key) { return Object.getPrototypeOf(target) }
+//                if ('prototype'===key) { return Object.getPrototypeOf(target) }
                 if (this._options.getUndefined) { return target[key] }
                 else { throw new TypeError(`未定義プロパティへの参照禁止: ${key}`) }
             },
@@ -92,9 +77,6 @@ class InsProxy { // class の instance を保護するのはObject.sealでは無
                 if (this._options.setDefined) {
                     console.log(target, receiver, key, value)
                     if (Type.hasSetter(target, key)) { return Reflect.set(target, key, value) } // setter
-                    //if (Type.hasSetter(target, key)) { return Reflect.set(target, key, value, receiver) } // setter
-                    //if (Type.hasSetter(target, key)) { return Type.getSetter(target,key).apply(target, value) } // setter
-                    //if (Type.hasSetter(target, key)) { return Type.getSetter(target,key)(value) } // setter
                     else { target[key] = value } // field
                 } else { throw new TypeError(`定義済プロパティへの代入禁止: ${key}`) }
                 return true

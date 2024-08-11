@@ -337,22 +337,51 @@ window.addEventListener('load', async(e)=>{
     // hook.set
     ;(function(){
         const s = hook.set([2,4,6])
+        s.clear()
+        s.add(2)
+        s.add(4)
+        s.add(6)
         s.add(8)
-        console.log(s)
-        console.log('has' in s)
-        console.log(s.prototype)
-        console.log(s.__proto__)
-        console.log(Object.getPrototypeOf(s))
-        s.prototype.has(8)
-        s.has(8)
+        s.delete(8)
+        s.add(8)
         a.t(4===s.size)
         a.t([2,4,6,8].every(v=>s.has(v)))
     })();
     ;(function(){
-        const l = hook.ary([], {onValidate:()=>false})
-        a.e(hook.errors.valid, `Invalid value.`, ()=>l.push(3))
-        a.t(0===l.length)
+        const l = hook.set([], {onValidate:()=>false})
+        a.e(hook.errors.valid, `Invalid value.`, ()=>l.add(3))
+        a.t(0===l.size)
     })();
+    ;(function(){
+        let count = 0;
+        const s = hook.set([], {onValidate:()=>false, onInvalid:()=>++count})
+        s.add(1)
+        a.t(0===s.size)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const s = hook.set([], {onValid:()=>++count})
+        s.add(1)
+        a.t(1===s.size)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const s = hook.set([], {onChanged:()=>++count})
+        s.add(1)
+        a.t(1===s.size)
+        a.t(1===count)
+        s.add(1)
+        a.t(1===s.size)
+        a.t(1===count)
+    })();
+    ;(function(){
+        const s = hook.set([2,4,6])
+        const A = [...s.values()]
+        a.t([2,4,6].every((v,i)=>v===A[i]))
+    })();
+
 
 
 

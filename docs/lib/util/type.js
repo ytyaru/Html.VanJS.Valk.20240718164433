@@ -263,7 +263,22 @@ class Type {
     _getDesc(obj,key) { return Object.getOwnPropertyDescriptor(obj, key) }
     getGetter(obj,key) { return obj.__lookupGetter__(key) ?? Object.getOwnPropertyDescriptor(obj, key).get }
     getSetter(obj,key) { return obj.__lookupSetter__(key) ?? Object.getOwnPropertyDescriptor(obj, key).set }
+    getOwner(name, target) {
+        if (this.isNU(target)) { return null }
+        else if ('function'===typeof target[name]) { return target }
+        else if (target.hasOwnProperty(name)) { return target }
+        else { this.getOwner(name, Object.getPrototypeOf(target)) }
+        //else { this.getOwner(name, target.property) }
 
+    }
+    /*
+    getMethodOwner(name, target) {
+        if (Type.isNU(target)) { return null }
+        else if ('function'===typeof target[name])) { return target }
+        else { this.getMethodOwner(name, target.property) }
+//        else if (target.hasOwnProperty(name)) { return target }
+    }
+    */
     /*
     async aWait(fn, ...args) {
         if ('AsyncFunction'===fn.constructor.name) { return await fn(...args) }

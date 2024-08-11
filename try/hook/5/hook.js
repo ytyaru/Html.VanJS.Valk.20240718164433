@@ -7,6 +7,11 @@ const destroyMethods = {
     Set: 'add,clear,delete'.split(','),
     Map: 'clear,delete,set'.split(','),
 }
+const notDestroyMethods = {
+    Array: 'at,concat,entries,every,filter,find,findIndex,findLast,findLastIndex,flat,flatMap,forEach,includes,indexOf,join,keys,lastIndexOf,map,reduce,reduceRight,slice,some,toLocaleString,toReversed,toSorted,toSpliced,toString,values,with'.split(','),
+    Set: 'difference,entries,forEach,has,intersection,isDisjointFrom,isSubsetOf,isSupersetOf,keys,Symbol.iterator,symmetricDifference,union,values'.split(','),
+    Map: 'entries,forEach,get,has,keys,values'.split(','),
+}
 class HookVal {
     static of(...args) { return new HookVal(...args) }
     constructor(v, options={}, insOpts={}) {
@@ -94,14 +99,9 @@ const HookableContainer = superClass => class extends superClass {
 //    constructor(...args) {
 //        super(...args)
     constructor(v, options={}, insOpts={}) {
-//        super(...v)
-        console.log(Array.isArray(v), superClass, v)
         if ([Set,Map].some(c=>c===superClass)) { super(v) }
-        //else { super(...v) }
         else if (Array.isArray(v)) { super(...v) }
-        else { super(v) }
-//        if (Array.isArray(v)) { super(...v) }
-//        else { super(v) }
+        else { super(v) } // 想定外
         this._options = {...{
             onBefore: ()=>{},
             onValidate: (i)=>true,
@@ -115,33 +115,8 @@ const HookableContainer = superClass => class extends superClass {
         }, ...options}
         console.log(this._options)
         this._defineDestoryMethods()
-//        return this
+        this._defineNotDestoryMethods()
         return InsProxy.of(this, insOpts)
-        /*
-        return InsProxy.of(this, {
-            onGetDefined:(target, key, receiver)=>{
-                if (Type.hasGetter(target, key)) { return Reflect.get(target, key) } // getter
-                else if ('function'===target[key]) {// method, constructor
-                    //const t = key in destroyMethods[superClass.name] ? target : target.super
-                    //console.log(key, t)
-                    //return target[key].bind(target)
-                    //return target[key].bind(t)
-
-//                    console.log(key, target.super.prototype[key])
-//                    return key in destroyMethods[superClass.name] ? target[key].bind(t) : target.super.prototype[key]
-//                    console.log(key, target.prototype[key])
-//                    return key in destroyMethods[superClass.name] ? target[key].bind(t) : target.prototype[key]
-//                    console.log(key, target.constructor.prototype[key])
-//                    return key in destroyMethods[superClass.name] ? target[key].bind(t) : target.constructor.prototype[key]
-                    console.log(key, target.constructor.prototype[key])
-                    return key in destroyMethods[superClass.name] ? target[key].bind(t) : target.constructor.prototype[key]
-                      
-                } 
-                else { return target[key] } // field
-            },
-            ...insOpts
-        })
-        */
     }
     _defineDestoryMethods() {
         const names = Object===superClass ? Object.keys(this) : destroyMethods[superClass.name]
@@ -155,6 +130,7 @@ const HookableContainer = superClass => class extends superClass {
                         ()=>{ r = super[name](...args);
                             this._options.onValid(o, this); },
                         ()=>this._options.onInvalid(o, name, args))
+                    console.log(this._isChanged(o), o, this)
                     ifel(this._isChanged(o), ()=>this._options.onChanged(), ()=>this._options.onUnchanged())
                     this._options.onAfter()
                     return r
@@ -162,8 +138,16 @@ const HookableContainer = superClass => class extends superClass {
             })
         }
     }
+    _defineNotDestoryMethods() {
+        const names = Object===superClass ? Object.keys(this) : notDestroyMethods[superClass.name]
+        for (let name of names) {
+            Object.defineProperty(this, name, {
+                value:(...args)=>super[name](...args),
+            })
+        }
+    }
     _isChanged(o) {
-        console.log(this)
+        console.log(this, o)
         console.log([...this])
         console.log(Type.toStr([...this]))
         console.log(this instanceof Array, Array.isArray(o), Type.toStr([...this])===Type.toStr([...o]))
@@ -171,7 +155,6 @@ const HookableContainer = superClass => class extends superClass {
         if (this instanceof Map) { return this.size === o.size && [...this.keys()].every(k=>o.has(k) && o.get(k)===this.get(k)) }
         if (this instanceof Array) { return this.length === o.length && this.every((v,i) =>v===o[i]) }
         if ('Object'===this.constructor.name) { return Type.toStr(this)===Type.toStr(o) } 
-        //return [...Object.entries(this)].every(([k,v])=>)
     }
 }
 class HookAry extends HookableContainer(Array) { constructor(v, opts={}, insOpts={}) { super(v, opts, insOpts) } }
