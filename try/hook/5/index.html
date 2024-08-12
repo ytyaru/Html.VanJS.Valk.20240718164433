@@ -419,20 +419,126 @@ window.addEventListener('load', async(e)=>{
     // hook.map
     ;(function(){
         const m = hook.map({a:0, b:1, c:2})
-        const ks = [...m.keys()]
-        const vs = [...m.values()]
         a.t(Type.isIns(m, hook.types.map))
         a.t('a,b,c'.split(',').every((v,i)=>v===[...m.keys()][i]))
         a.t([0,1,2].every((v,i)=>v===[...m.values()][i]))
     })();
     ;(function(){
-        const m = hook.map({a:0, b:1, c:2}, {onValidate:()=>})
-        const ks = [...m.keys()]
-        const vs = [...m.values()]
+        const m = hook.map({a:0, b:1, c:2}, {onValidate:()=>false})
+        a.e(hook.errors.valid, 'Invalid value.', ()=>m.set('d', 3))
+    })();
+    ;(function(){
+        let count = 0;
+        const m = hook.map({a:0, b:1, c:2}, {onValidate:()=>false, onInvalid:()=>++count})
+        m.set('d', 3)
+        a.t(3===m.size)
         a.t(Type.isIns(m, hook.types.map))
         a.t('a,b,c'.split(',').every((v,i)=>v===[...m.keys()][i]))
         a.t([0,1,2].every((v,i)=>v===[...m.values()][i]))
     })();
+    ;(function(){
+        let count = 0;
+        const m = hook.map({a:0, b:1, c:2}, {onChanged:()=>++count})
+        m.set('d', 3)
+        a.t(4===m.size)
+        a.t(1===count)
+        a.t(Type.isIns(m, hook.types.map))
+        a.t('a,b,c,d'.split(',').every((v,i)=>v===[...m.keys()][i]))
+        a.t([0,1,2,3].every((v,i)=>v===[...m.values()][i]))
+        m.set('d', 3)
+        a.t(4===m.size)
+        a.t(1===count)
+        m.set('d', 4)
+        a.t(4===m.size)
+        a.t(2===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const m = hook.map({a:0, b:1, c:2}, {onUnchanged:()=>++count})
+        m.set('d', 3)
+        a.t(4===m.size)
+        a.t(0===count)
+        a.t(Type.isIns(m, hook.types.map))
+        a.t('a,b,c,d'.split(',').every((v,i)=>v===[...m.keys()][i]))
+        a.t([0,1,2,3].every((v,i)=>v===[...m.values()][i]))
+        m.set('d', 3)
+        a.t(4===m.size)
+        a.t(1===count)
+        m.set('d', 4)
+        a.t(4===m.size)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const m = hook.map({a:0, b:1, c:2}, {onBefore:()=>++count})
+        m.set('d', 3)
+        a.t(4===m.size)
+        a.t(1===count)
+        a.t(Type.isIns(m, hook.types.map))
+        a.t('a,b,c,d'.split(',').every((v,i)=>v===[...m.keys()][i]))
+        a.t([0,1,2,3].every((v,i)=>v===[...m.values()][i]))
+        m.set('d', 3)
+        a.t(4===m.size)
+        a.t(2===count)
+        m.set('d', 4)
+        a.t(4===m.size)
+        a.t(3===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const m = hook.map({a:0, b:1, c:2}, {onAfter:()=>++count})
+        m.set('d', 3)
+        a.t(4===m.size)
+        a.t(1===count)
+        a.t(Type.isIns(m, hook.types.map))
+        a.t('a,b,c,d'.split(',').every((v,i)=>v===[...m.keys()][i]))
+        a.t([0,1,2,3].every((v,i)=>v===[...m.values()][i]))
+        m.set('d', 3)
+        a.t(4===m.size)
+        a.t(2===count)
+        m.set('d', 4)
+        a.t(4===m.size)
+        a.t(3===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const m = hook.map({a:0, b:1, c:2}, {onAfter:()=>++count})
+        const expecteds = [['a', 0], ['b', 1], ['c', 2]]
+        let i=0;
+        for (let [k,v] of m) {
+            console.log(k, v)
+            a.t(k===expecteds[i][0] && v===expecteds[i][1])
+            i++
+        }
+    })();
+    ;(function(){
+        const expecteds = [2,4,6]
+        const A = hook.ary(expecteds)
+        let i = 0;
+        for (let v of A) {
+            a.t(v===expecteds[i])
+            i++
+        }
+    })();
+    ;(function(){
+        const expecteds = [2,4,6]
+        const s = hook.set(expecteds)
+        let i = 0;
+        for (let v of s) {
+            a.t(v===expecteds[i])
+            i++
+        }
+    })();
+
+
+
+
+
+
+
+
+
+
 
 
 
