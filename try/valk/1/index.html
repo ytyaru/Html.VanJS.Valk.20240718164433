@@ -3,7 +3,7 @@
 <script src="../../../docs/lib/util/test/black-box.js"></script>
 <script src="../../object/1/deepFreeze.js"></script>
 <script src="hook.js"></script>
-<script src="fix.js"></script>
+<script src="valk.js"></script>
 <script>
 "use strict";
 window.addEventListener('load', async(e)=>{
@@ -628,6 +628,32 @@ window.addEventListener('load', async(e)=>{
         a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>v.x)
         a.e(hook.errors.fix, 'Assignment to fix variable.', ()=>v.set('d', 3))
     })();
+    // FixObj
+    ;(function(){
+        const v = valk.fix({a:0, b:1, c:2})
+        //a.t(Type.isIns(v, valk.types.FixVal))
+        console.log(v)
+        console.log(v instanceof Object)
+//        console.log(v.toString()) // TypeError: Cannot convert a Symbol value to a string
+        a.t(v instanceof valk.types.FixObj)
+        a.t(3===v.size)
+        a.t(v.has('a'))
+        a.t(v.has('b'))
+        a.t(v.has('c'))
+        a.f(v.has('d'))
+        a.t(0===v.get('a'))
+        a.t(1===v.get('b'))
+        a.t(2===v.get('c'))
+        a.e(TypeError, '未定義プロパティへの代入禁止: a', ()=>v['a']=9)
+        a.e(TypeError, '未定義プロパティへの参照禁止: a', ()=>v['a'])
+        a.e(TypeError, '未定義プロパティへの代入禁止: 0', ()=>v[0]=1)
+        a.e(TypeError, '未定義プロパティへの参照禁止: 0', ()=>v[0])
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>v.x=1)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>v.x)
+        a.e(hook.errors.fix, 'Assignment to fix variable.', ()=>v.set('d', 3))
+    })();
+
+
 
 
 
