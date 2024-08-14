@@ -1,3 +1,10 @@
+// Error
+class FixError extends Error { constructor(msg=`Assignment to fix variable.`) { super(msg); this.name='FixError' } }
+class EnumError extends Error { constructor(msg=`Enum generation failed.`) { super(msg); this.name='EnumError' } }
+class CounterError extends Error { constructor(msg=`Assignment to counter variable.`) { super(msg); this.name='CounterError' } }
+class SomeError extends Error { constructor(msg=`Only the specified value can be assigned.`) { super(msg); this.name='SomeError' } }
+class ValidError extends Error { constructor(msg=`Invalid value.`) { super(msg); this.name='ValidError' } }
+// Fix
 class FixVal extends hook.types.val {
     static of(...args) { return new FixVal(...args) }
     constructor(v, options={}, insOpts={}) { super(v, options={}, {getDestroyMethod: false, setDefined:false, ...insOpts}) }
@@ -18,6 +25,7 @@ class FixSet extends hook.types.set {
     static of(...args) { return new FixSet(...args) }
     constructor(v, options={}, insOpts={}) { super(v, options={}, {getDestroyMethod: false, setDefined:false, ...insOpts}) }
 }
+// Enum
 class Enum {
     static types = {}
     static make(typeName, ids) {
@@ -170,7 +178,8 @@ class Some {
     static of(v, candidates, writable=false) { return new Some(v, candidates, writable) }
     constructor(v, candidates, writable=false) {
         this._v = v
-        this._cands = hook.set(v, {}, {getDestroyMethod: writable, setDefined: writable})
+        this._cands = hook.set(candidates, {}, {getDestroyMethod: writable, setDefined: writable})
+        //this._cands = hook.set(v, {}, {getDestroyMethod: writable, setDefined: writable})
         /*
         console.log(writable)
         if (writable) {
@@ -296,7 +305,7 @@ class SomeChanged {
                 cands: { writable:false, onChanged:()=>{} } }, // ChangedSet, ChangedMap
             ...options,
         }
-        this._cands = hook.set(v, {}, {getDestroyMethod: writable, setDefined: writable})
+        this._cands = hook.set(candidates, {}, {getDestroyMethod: writable, setDefined: writable})
         /*
         this._cands = ifel(this._options.cands.writable, 
             ()=>((candidates instanceof Set) ? candidates : ((Array.isArray(candidates) ? new Set(candidates) : null))),
@@ -363,11 +372,27 @@ window.valk = Object.deepFreeze({
             Type.isObj(v), ()=>FixObj.of(v,options,insOpts),
             ()=>FixVal.of(v,options,insOpts)
     ),
+    enum:(...args)=>Enum.make(...args),
+    count:(...args)=>new Counter(...args),
+    range:(...args)=>Range.of(...args),
+    some:(...args)=>Some.of(...args),
+    typed:(...args)=>null,
+    valid:(...args)=>null,
+    changed:(...args)=>null,
+    enums: Enum.types,
     types: {
         FixVal: FixVal,
         FixObj: FixObj,
         FixAry: FixAry,
         FixSet: FixSet,
         FixMap: FixMap,
-    }
+        Counter: Counter,
+    },
+    errors: {
+        FixError: FixError,
+        EnumError: EnumError,
+        CounterError: CounterError,
+        SomeError: SomeError,
+    },
+
 })

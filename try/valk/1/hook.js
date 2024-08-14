@@ -14,8 +14,57 @@ const notDestroyMethods = {
 }
 class InsProxy { // class の instance を保護するのはObject.sealでは無理。getterまで弾かれる。のでProxyで代用する
     static of(target, options={}) { return new InsProxy(target, options) }
+    static defaultPermission()  { return {
+        getDestroyMethod: true, // 破壊的メソッドの取得（呼出）
+        getUndefined: false,
+        setDefined: true,
+        setUndefined: false,
+    }}
     constructor(target, options={}) {
         this._options = {
+            //...InsProxy.defaultOptions(),
+            ...InsProxy.defaultPermission(),
+            // callbackFn
+            onGetDefined:(target, key, receiver)=>{
+    //                console.log('onGetDefined:', key, target)
+//                console.log([Array,Set,Map].some(T=>target instanceof T), target.constructor.name)
+                // 破壊的メソッドの取得（呼出）禁止
+    //                console.log([Array,Set,Map].filter(T=>target instanceof T)[0].name)
+                const con = this._getContainer(target)
+//                console.log(con)
+//                console.log(target, key)
+                //if ([Array,Set,Map].some(T=>target instanceof T) 
+                if (con && !this._options.getDestroyMethod 
+                    && destroyMethods[con.name].some(n=>n===key)) {throw new FixError()} 
+                    //&& destroyMethods[target.constructor.name].some(n=>n===key)) {throw new FixError()} 
+                else if (Type.hasGetter(target, key)) { return Reflect.get(target, key) } // getter
+                else if ('function'===target[key]) { return target[key].bind(target) } // method, constructor
+                else if (key === Symbol.iterator) { return target[Symbol.iterator].bind(target) } // for of
+                else { return target[key] } // field
+            },
+            onGetUndefined:(target, key, receiver)=>{
+    //                console.log('onGetUndefined:', key, target)
+    //                if ('prototype'===key) { return Object.getPrototypeOf(target) }
+                if (this._options.getUndefined) { return target[key] }
+                else { throw new TypeError(`未定義プロパティへの参照禁止: ${key}`) }
+            },
+            onSetDefined:(target, key, value, receiver)=>{
+//                console.log(target, key, value, this._options.setDefined)
+                if (this._options.setDefined) {
+    //                    console.log(target, receiver, key, value)
+                    if (Type.hasSetter(target, key)) { return Reflect.set(target, key, value) } // setter
+                    else { target[key] = value } // field
+                } else { throw new TypeError(`定義済プロパティへの代入禁止: ${key}`) }
+                return true
+            },
+            onSetUndefined:(target, key, value, receiver)=>{
+                if (this._options.setUndefined) { target[key] = value }
+                else { throw new TypeError(`未定義プロパティへの代入禁止: ${key}`) }
+                return true
+            },
+
+            ...options,
+            /*
             // permission
             getDestroyMethod: true, // 破壊的メソッドの取得（呼出）
             getUndefined: false,
@@ -29,6 +78,7 @@ class InsProxy { // class の instance を保護するのはObject.sealでは無
 //                console.log([Array,Set,Map].filter(T=>target instanceof T)[0].name)
                 const con = this._getContainer(target)
                 console.log(con)
+                console.log(target, key)
                 //if ([Array,Set,Map].some(T=>target instanceof T) 
                 if (con && !this._options.getDestroyMethod 
                     && destroyMethods[con.name].some(n=>n===key)) {throw new FixError()} 
@@ -45,6 +95,7 @@ class InsProxy { // class の instance を保護するのはObject.sealでは無
                 else { throw new TypeError(`未定義プロパティへの参照禁止: ${key}`) }
             },
             onSetDefined:(target, key, value, receiver)=>{
+                console.log(target, key, value, this._options.setDefined)
                 if (this._options.setDefined) {
 //                    console.log(target, receiver, key, value)
                     if (Type.hasSetter(target, key)) { return Reflect.set(target, key, value) } // setter
@@ -58,6 +109,7 @@ class InsProxy { // class の instance を保護するのはObject.sealでは無
                 return true
             },
             ...options,
+            */
         }
         return new Proxy(target, { // getter, setter を受け付ける
             get:(target, key, receiver)=>this._options['onGet' + ((key in target) ? 'Defined' : 'Undefined')](target, key, receiver),
@@ -131,6 +183,9 @@ class HookObj {
             },
             onSetDefined: (target, key, value, receiver)=>this.set(target, key, value, receiver)
         }
+//        console.log('**************************************')
+//        console.log(insOpts.setUndefined)
+        this._insOpts = {...InsProxy.defaultPermission(), ...insOpts}
         if (insOpts.setUndefined) {target.onSetUndefined = (target, key, value, receiver)=>this.set(target, key, value, receiver)}
         //this[Symbol.iterator] = ()=>Object.entries(this)
         //this[Symbol.iterator] = ()=>new ObjItr(obj)
@@ -156,9 +211,12 @@ class HookObj {
             else if (Type.isFn(target[key])) { return target[key].bind(target) } // method, constructor?
             else if (key === Symbol.iterator) { return target[Symbol.iterator].bind(target) } // for of
             return target[key] // field
-        }
+        } else {throw new TypeError(`未定義プロパティへの参照禁止: ${key}`)}
     }
     set(target, key, value, receiver) {
+//        console.log('HookObj set:', key, value)
+        if (key in target) {if (!this._insOpts.setDefined) {throw new TypeError(`定義済プロパティへの代入禁止: ${key}`)}}
+        else {if (!this._insOpts.setUndefined) {throw new TypeError(`未定義プロパティへの代入禁止: ${key}`)}}
         this._options.onBefore(target, key, value, receiver)
         const o = this.get(target, key, receiver)
         let r;
@@ -173,6 +231,21 @@ class HookObj {
         this._options.onAfter(target, key, value, receiver, o)
         return true
     }
+    /*
+    onSetDefined:(target, key, value, receiver)=>{
+        console.log(target, key, value, this._options.setDefined)
+        if (this._options.setDefined) {
+            if (Type.hasSetter(target, key)) { return Reflect.set(target, key, value) } // setter
+            else { target[key] = value } // field
+        } else { throw new TypeError(`定義済プロパティへの代入禁止: ${key}`) }
+        return true
+    },
+    onSetUndefined:(target, key, value, receiver)=>{
+        if (this._options.setUndefined) { target[key] = value }
+        else { throw new TypeError(`未定義プロパティへの代入禁止: ${key}`) }
+        return true
+    },
+    */
 }
 class ObjItr {
     constructor(o) {
