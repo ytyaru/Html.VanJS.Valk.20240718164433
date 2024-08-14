@@ -1,0 +1,1435 @@
+<script src="../../../docs/lib/util/type.js"></script>
+<script src="../../../docs/lib/util/test/assertion.js"></script>
+<script src="../../../docs/lib/util/test/black-box.js"></script>
+<script src="../../object/1/deepFreeze.js"></script>
+<script src="hook.js"></script>
+<script src="valk.js"></script>
+<script>
+"use strict";
+window.addEventListener('load', async(e)=>{
+    const a = new Assertion();
+    const bb = new BlackBox();
+    // InsProxy
+    ;(function(){
+        class C {
+            //constructor(v) { this._v = v; return InsProxy.of(this) }
+            constructor(v) { this._v = v; return hook.ins(this) }
+            get v() { return this._v }
+            set v(v) { this._v = v + 1 }
+        }
+        const c = new C()
+        c._v = 0
+        a.t(0===c._v)
+        a.t(0===c.v)
+        c.v = 1
+        console.log(c.v, c._v)
+        a.t(2===c.v)
+        a.t(2===c._v)
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>c.x=0)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>c.x)
+    })();
+    ;(function(){
+        class C {
+            //constructor(v) { this._v = v; return InsProxy.of(this, {setDefined:false}) }
+            constructor(v) { this._v = v; return hook.ins(this, {setDefined:false}) }
+            get v() { return this._v }
+            set v(v) { this._v = v + 1 }
+        }
+        const c = new C()
+        a.e(TypeError, '定義済プロパティへの代入禁止: v', ()=>c.v=0)
+        a.e(TypeError, '定義済プロパティへの代入禁止: _v', ()=>c._v=0)
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>c.x=0)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>c.x)
+    })();
+    ;(function(){
+        class C {
+            #v=0; // Proxy は private(#)と連携できない
+            //constructor(v) { this.#v = v; return InsProxy.of(this) }
+            constructor(v) { this.#v = v; return hook.ins(this) }
+            get v() { return this.#v }
+            set v(v) { this.#v = v + 1 }
+        }
+        const c = new C()
+//        c.#v = 0; // SyntaxError: Private field '#v' must be declared in an enclosing class
+        //a.e(SyntaxError, `Private field '#v' must be declared in an enclosing class`, ()=>c.#v=0)
+//        a.t(0===c.#v)
+        // Proxy を経由して #v などのprivateにアクセスするとエラーになるクソ使用
+        // https://stackoverflow.com/questions/72805454/typeerror-cannot-read-private-member-from-an-object-whose-class-did-not-declare
+        console.log(c.v) // TypeError: Cannot read private member #v from an object whose class did not declare it
+        a.t(undefined===c.v) // TypeError: Cannot read private member #v from an object whose class did not declare it
+        c.v = 1
+//        console.log(c.v, c.#v)
+        a.t(2===c.v)
+//        a.t(2===c.#v)
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>c.x=0)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>c.x)
+    })();
+    ;(function(){
+        class C {
+            #v=0;
+            //constructor(v) { this.#v = v; return InsProxy.of(this) }
+            constructor(v) { this.#v = v; return hook.ins(this) }
+            get v() { return this.#v }
+            set v(v) { this.#v = v + 1 }
+        }
+//        class D extends C { constructor(v) { super(v); this.#v = 0; } } // SyntaxError: Private field '#v' must be declared in an enclosing class
+    })();
+    ;(function(){
+        class C {
+            //constructor(v) { this._v = v; return InsProxy.of(this) }
+            constructor(v) { this._v = v; return hook.ins(this) }
+            get v() { return this._v }
+            set v(v) { this._v = v + 1 }
+        }
+        class D extends C { constructor(v) { super(v); super._v = 0; } }
+        const c = new C()
+        c._v = 0
+        a.t(0===c._v)
+        a.t(0===c.v)
+        c.v = 1
+        console.log(c.v, c._v)
+        a.t(2===c.v)
+        a.t(2===c._v)
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>c.x=0)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>c.x)
+
+        const d = new D()
+        a.t(0===d._v)
+        a.t(0===d.v)
+        c.v = 1
+        console.log(d.v, d._v)
+        a.t(0===d.v)  // getter, setter は 継承されない！ので初期値のまま…
+        a.t(0===d._v) // getter, setter は 継承されない！ので初期値のまま…
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>d.x=0)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>d.x)
+    })();
+    ;(function(){
+        class C {
+            //constructor(v) { this._v = v; return InsProxy.of(this) }
+            constructor(v) { this._v = v; return hook.ins(this) }
+            get v() { return this._v }
+            set v(v) { this._v = v + 1 }
+        }
+        class D extends C {
+            constructor(v) { super(v); super._v = 0; }
+            get v() { return super.v } // いちいち再定義しないと継承されない…
+            set v(v) { super.v = v }   // いちいち再定義しないと継承されない…
+        }
+        const c = new C()
+        c._v = 0
+        a.t(0===c._v)
+        a.t(0===c.v)
+        c.v = 1
+        console.log(c.v, c._v)
+        a.t(2===c.v)
+        a.t(2===c._v)
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>c.x=0)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>c.x)
+
+        const d = new D()
+        a.t(0===d._v)
+        a.t(0===d.v)
+        c.v = 1
+        console.log(d.v, d._v)
+        a.t(0===d.v)  // getter, setter は 継承されない！ので初期値のまま…
+        a.t(0===d._v) // getter, setter は 継承されない！ので初期値のまま…
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>d.x=0)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>d.x)
+
+    })();
+       
+    // Hook
+    // hook.val
+    ;(function(){
+        const o = hook.val(0)
+        o.v = 1
+        a.t(1===o.v)
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>o.x=1)
+    })();
+    ;(function(){
+        const o = hook.val(0, {onValidate:(i,v,o)=>0===i%2})
+        o.v = 1
+        a.t(0===o.v)
+        o.v = 2
+        a.t(2===o.v)
+    })();
+    ;(function(){
+        let changedNum = 0;
+        const o = hook.val(0, {onChanged:()=>++changedNum})
+        o.v = 1
+        a.t(1===o.v)
+        a.t(1===changedNum)
+        o.v = 1
+        a.t(1===o.v)
+        a.t(1===changedNum)
+        o.v = 5
+        a.t(5===o.v)
+        a.t(2===changedNum)
+    })();
+    ;(function(){
+        const o = hook.val(0, {onSet:()=>9})
+        o.v = 1
+        a.t(9===o.v)
+    })();
+    ;(function(){
+        let count = 0;
+        const o = hook.val(0, {onValid:()=>++count})
+        o.v = 1
+        a.t(1===o.v)
+        a.t(1===count)
+    })();
+    ;(function(){
+        const o = hook.val(0, {onValidate:()=>false, onSetDefault:()=>9})
+        o.v = 1
+        a.t(9===o.v)
+    })();
+    ;(function(){
+        let count = 0;
+        const o = hook.val(0, {onValidate:()=>false, onInvalid:()=>++count})
+        o.v = 1
+        a.t(0===o.v)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const o = hook.val(0, {onChanged:()=>++count})
+        o.v = 1
+        a.t(1===o.v)
+        a.t(1===count)
+        o.v = 1
+        a.t(1===o.v)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const o = hook.val(0, {onUnchanged:()=>++count})
+        o.v = 1
+        a.t(1===o.v)
+        a.t(0===count)
+        o.v = 1
+        a.t(1===o.v)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const o = hook.val(0, {onBefore:()=>++count})
+        o.v = 1
+        a.t(1===o.v)
+        a.t(1===count)
+        o.v = 1
+        a.t(1===o.v)
+        a.t(2===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const o = hook.val(0, {onAfter:()=>++count})
+        o.v = 1
+        a.t(1===o.v)
+        a.t(1===count)
+        o.v = 1
+        a.t(1===o.v)
+        a.t(2===count)
+    })();
+
+
+
+    // hook.obj
+    ;(function(){
+        let changedNum = 0;
+        const o = hook.obj({i:0}, {onChanged:()=>++changedNum})
+        o.i = 1
+        a.t(1===o.i)
+        a.t(1===changedNum)
+        o.i = 1
+        a.t(1===o.i)
+        a.t(1===changedNum)
+    })();
+    ;(function(){
+        let count = 0;
+        const o = hook.obj({i:0}, {onUnchanged:()=>++count})
+        o.i = 1
+        a.t(1===o.i)
+        a.t(0===count)
+        o.i = 1
+        a.t(1===o.i)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let changedNum = 0;
+        const o = hook.obj({i:0}, {onValidate:(t,k,v,r,o)=>'i'===k && (0===v%2), onChanged:()=>++changedNum})
+        a.e(hook.errors.valid, `Invalid value.`, ()=>{o.i = 1})
+        a.t(0===o.i)
+        a.t(0===changedNum)
+        o.i = 2
+        a.t(2===o.i)
+        a.t(1===changedNum)
+    })();
+    ;(function(){
+        const o = hook.obj({i:0}, {onSet:(t,k,v,r,o)=>t[k]=999})
+        o.i = 1
+        a.t(999===o.i)
+    })();
+    ;(function(){
+        let changedNum = 0;
+        const o = hook.obj({i:0}, {onValidate:(t,k,v,r,o)=>false})
+        a.e(hook.errors.valid, `Invalid value.`, ()=>{o.i = 1})
+        a.t(0===o.i)
+    })();
+    ;(function(){
+        let changedNum = 0;
+        const o = hook.obj({i:0}, {onValidate:(t,k,v,r,o)=>false, onSetDefault:(t,k,v,r,o)=>t[k]=999})
+        a.e(hook.errors.valid, `Invalid value.`, ()=>{o.i = 1})
+        a.t(999===o.i)
+    })();
+    ;(function(){
+        let count = 0;
+        const o = hook.obj({i:0}, {onBefore:()=>++count})
+        o.i = 1
+        a.t(1===o.i)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const o = hook.obj({i:0}, {onAfter:()=>++count})
+        o.i = 1
+        a.t(1===o.i)
+        a.t(1===count)
+    })();
+
+    // hook.ary
+    ;(function(){
+        let count = 0;
+        const l = hook.ary([], {onChanged:()=>++count})
+        console.log(hook.types)
+        a.t(Type.isIns(l, hook.types.ary))
+        a.t(l instanceof hook.types.ary)
+        l.push(3)
+        a.t(1===l.length)
+        a.t(3===l[0])
+        a.t(1===count)
+    })();
+    ;(function(){
+        const l = hook.ary([], {onValidate:()=>false})
+        a.e(hook.errors.valid, `Invalid value.`, ()=>l.push(3))
+        a.t(0===l.length)
+    })();
+    ;(function(){
+        let count = 0;
+        const l = hook.ary([], {onValidate:()=>false, onInvalid:()=>++count})
+        l.push(3)
+        a.t(0===l.length)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const l = hook.ary([], {onBefore:()=>++count})
+        l.push(3)
+        a.t(1===l.length)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const l = hook.ary([], {onAfter:()=>++count})
+        l.push(3)
+        a.t(1===l.length)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const l = hook.ary([1,2,3,4])
+        const A = l.filter(v=>0===v%2)
+        a.t(2===A.length)
+        a.t(2===A[0])
+        a.t(4===A[1])
+    })();
+
+    // hook.set
+    ;(function(){
+        const s = hook.set([2,4,6])
+        a.t(Type.isIns(s, hook.types.set))
+        s.clear()
+        s.add(2)
+        s.add(4)
+        s.add(6)
+        s.add(8)
+        s.delete(8)
+        s.add(8)
+        a.t(4===s.size)
+        a.t([2,4,6,8].every(v=>s.has(v)))
+    })();
+    ;(function(){
+        const l = hook.set([], {onValidate:()=>false})
+        a.e(hook.errors.valid, `Invalid value.`, ()=>l.add(3))
+        a.t(0===l.size)
+    })();
+    ;(function(){
+        let count = 0;
+        const s = hook.set([], {onValidate:()=>false, onInvalid:()=>++count})
+        s.add(1)
+        a.t(0===s.size)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const s = hook.set([], {onValid:()=>++count})
+        s.add(1)
+        a.t(1===s.size)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const s = hook.set([], {onChanged:()=>++count})
+        s.add(1)
+        a.t(1===s.size)
+        a.t(1===count)
+        s.add(1)
+        a.t(1===s.size)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const s = hook.set([], {onUnchanged:()=>++count})
+        s.add(1)
+        a.t(1===s.size)
+        a.t(0===count)
+        s.add(1)
+        a.t(1===s.size)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const s = hook.set([], {onBefore:()=>++count})
+        s.add(1)
+        a.t(1===s.size)
+        a.t(1===count)
+        s.add(1)
+        a.t(1===s.size)
+        a.t(2===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const s = hook.set([], {onAfter:()=>++count})
+        s.add(1)
+        a.t(1===s.size)
+        a.t(1===count)
+        s.add(1)
+        a.t(1===s.size)
+        a.t(2===count)
+    })();
+    ;(function(){
+        const s = hook.set([2,4,6])
+        const A = [...s.values()]
+        a.t([2,4,6].every((v,i)=>v===A[i]))
+    })();
+
+    // hook.map
+    ;(function(){
+        const m = hook.map({a:0, b:1, c:2})
+        a.t(Type.isIns(m, hook.types.map))
+        a.t('a,b,c'.split(',').every((v,i)=>v===[...m.keys()][i]))
+        a.t([0,1,2].every((v,i)=>v===[...m.values()][i]))
+    })();
+    ;(function(){
+        const m = hook.map({a:0, b:1, c:2}, {onValidate:()=>false})
+        a.e(hook.errors.valid, 'Invalid value.', ()=>m.set('d', 3))
+    })();
+    ;(function(){
+        let count = 0;
+        const m = hook.map({a:0, b:1, c:2}, {onValidate:()=>false, onInvalid:()=>++count})
+        m.set('d', 3)
+        a.t(3===m.size)
+        a.t(Type.isIns(m, hook.types.map))
+        a.t('a,b,c'.split(',').every((v,i)=>v===[...m.keys()][i]))
+        a.t([0,1,2].every((v,i)=>v===[...m.values()][i]))
+    })();
+    ;(function(){
+        let count = 0;
+        const m = hook.map({a:0, b:1, c:2}, {onChanged:()=>++count})
+        m.set('d', 3)
+        a.t(4===m.size)
+        a.t(1===count)
+        a.t(Type.isIns(m, hook.types.map))
+        a.t('a,b,c,d'.split(',').every((v,i)=>v===[...m.keys()][i]))
+        a.t([0,1,2,3].every((v,i)=>v===[...m.values()][i]))
+        m.set('d', 3)
+        a.t(4===m.size)
+        a.t(1===count)
+        m.set('d', 4)
+        a.t(4===m.size)
+        a.t(2===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const m = hook.map({a:0, b:1, c:2}, {onUnchanged:()=>++count})
+        m.set('d', 3)
+        a.t(4===m.size)
+        a.t(0===count)
+        a.t(Type.isIns(m, hook.types.map))
+        a.t('a,b,c,d'.split(',').every((v,i)=>v===[...m.keys()][i]))
+        a.t([0,1,2,3].every((v,i)=>v===[...m.values()][i]))
+        m.set('d', 3)
+        a.t(4===m.size)
+        a.t(1===count)
+        m.set('d', 4)
+        a.t(4===m.size)
+        a.t(1===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const m = hook.map({a:0, b:1, c:2}, {onBefore:()=>++count})
+        m.set('d', 3)
+        a.t(4===m.size)
+        a.t(1===count)
+        a.t(Type.isIns(m, hook.types.map))
+        a.t('a,b,c,d'.split(',').every((v,i)=>v===[...m.keys()][i]))
+        a.t([0,1,2,3].every((v,i)=>v===[...m.values()][i]))
+        m.set('d', 3)
+        a.t(4===m.size)
+        a.t(2===count)
+        m.set('d', 4)
+        a.t(4===m.size)
+        a.t(3===count)
+    })();
+    ;(function(){
+        let count = 0;
+        const m = hook.map({a:0, b:1, c:2}, {onAfter:()=>++count})
+        m.set('d', 3)
+        a.t(4===m.size)
+        a.t(1===count)
+        a.t(Type.isIns(m, hook.types.map))
+        a.t('a,b,c,d'.split(',').every((v,i)=>v===[...m.keys()][i]))
+        a.t([0,1,2,3].every((v,i)=>v===[...m.values()][i]))
+        m.set('d', 3)
+        a.t(4===m.size)
+        a.t(2===count)
+        m.set('d', 4)
+        a.t(4===m.size)
+        a.t(3===count)
+    })();
+
+    // for of
+    ;(function(){
+        const o = hook.obj({a:0, b:1, c:2})
+        const expecteds = [['a', 0], ['b', 1], ['c', 2]]
+        let i=0;
+        for (let [k,v] of o) {
+            console.log(k, v)
+            a.t(k===expecteds[i][0] && v===expecteds[i][1])
+            i++
+        }
+    })();
+    ;(function(){
+        let count = 0;
+        const m = hook.map({a:0, b:1, c:2}, {onAfter:()=>++count})
+        const expecteds = [['a', 0], ['b', 1], ['c', 2]]
+        let i=0;
+        for (let [k,v] of m) {
+            console.log(k, v)
+            a.t(k===expecteds[i][0] && v===expecteds[i][1])
+            i++
+        }
+    })();
+    ;(function(){
+        const expecteds = [2,4,6]
+        const A = hook.ary(expecteds)
+        let i = 0;
+        for (let v of A) {
+            a.t(v===expecteds[i])
+            i++
+        }
+    })();
+    ;(function(){
+        const expecteds = [2,4,6]
+        const s = hook.set(expecteds)
+        let i = 0;
+        for (let v of s) {
+            a.t(v===expecteds[i])
+            i++
+        }
+    })();
+
+    // hook.ins
+    ;(function(){
+        class C {
+            constructor(v) { this._v = v }
+            get v() { return this._v }
+            set v(v) { this._v = v + 1 }
+        }
+        const c = hook.ins(new C())
+        a.t(c instanceof C)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>c.x)
+        a.t(undefined===c.v)
+        c.v = 0
+        a.t(1===c.v)
+    })();
+
+    // valk.fix()
+    // FixVal
+    ;(function(){
+        const v = valk.fix(0)
+        //a.t(Type.isIns(v, valk.types.FixVal))
+        a.t(v instanceof valk.types.FixVal)
+        a.t(0===v.v)
+        a.e(TypeError, '定義済プロパティへの代入禁止: v', ()=>v.v=1)
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>v.x=1)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>v.x)
+    })();
+    // FixAry
+    ;(function(){
+        const v = valk.fix([2,4,6])
+        //a.t(Type.isIns(v, valk.types.FixVal))
+        a.t(v instanceof valk.types.FixAry)
+        a.t(3===v.length)
+        a.t(2===v[0])
+        a.t(4===v[1])
+        a.t(6===v[2])
+        a.e(TypeError, '定義済プロパティへの代入禁止: 0', ()=>v[0]=1)
+        a.e(TypeError, '未定義プロパティへの代入禁止: 3', ()=>v[3]=1)
+        a.e(TypeError, '未定義プロパティへの参照禁止: 3', ()=>v[3])
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>v.x=1)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>v.x)
+        a.e(hook.errors.fix, 'Assignment to fix variable.', ()=>v.push(7))
+    })();
+    // FixSet
+    ;(function(){
+        const v = valk.fix(new Set([2,4,6]))
+        //a.t(Type.isIns(v, valk.types.FixVal))
+        a.t(v instanceof valk.types.FixSet)
+        a.t(3===v.size)
+        a.t(v.has(2))
+        a.t(v.has(4))
+        a.t(v.has(6))
+        a.f(v.has(7))
+        a.e(TypeError, '未定義プロパティへの代入禁止: 0', ()=>v[0]=1)
+        a.e(TypeError, '未定義プロパティへの参照禁止: 0', ()=>v[0])
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>v.x=1)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>v.x)
+        a.e(hook.errors.fix, 'Assignment to fix variable.', ()=>v.add(7))
+    })();
+    // FixMap
+    ;(function(){
+        const v = valk.fix(new Map(Object.entries({a:0, b:1, c:2})))
+        //a.t(Type.isIns(v, valk.types.FixVal))
+        console.log(v)
+        a.t(v instanceof valk.types.FixMap)
+        a.t(3===v.size)
+        a.t(v.has('a'))
+        a.t(v.has('b'))
+        a.t(v.has('c'))
+        a.f(v.has('d'))
+        a.t(0===v.get('a'))
+        a.t(1===v.get('b'))
+        a.t(2===v.get('c'))
+        a.e(TypeError, '未定義プロパティへの代入禁止: a', ()=>v['a']=9)
+        a.e(TypeError, '未定義プロパティへの参照禁止: a', ()=>v['a'])
+        a.e(TypeError, '未定義プロパティへの代入禁止: 0', ()=>v[0]=1)
+        a.e(TypeError, '未定義プロパティへの参照禁止: 0', ()=>v[0])
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>v.x=1)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>v.x)
+        a.e(hook.errors.fix, 'Assignment to fix variable.', ()=>v.set('d', 3))
+    })();
+    // FixObj
+    ;(function(){
+        const v = valk.fix({a:0, b:1, c:2})
+        //a.t(Type.isIns(v, valk.types.FixVal))
+        console.log(v)
+        console.log(v instanceof Object)
+        console.log(v instanceof hook.types.obj)
+//        console.log(v.toString()) // TypeError: Cannot convert a Symbol value to a string
+//        a.t(v instanceof valk.types.FixObj)
+//        a.t(3===v.size)
+        a.t(0===v.a)
+        a.t(1===v.b)
+        a.t(2===v.c)
+        a.t(0===v['a'])
+        a.t(1===v['b'])
+        a.t(2===v['c'])
+        a.e(TypeError, '定義済プロパティへの代入禁止: a', ()=>v['a']=9)
+//        a.e(TypeError, '定義済プロパティへの参照禁止: a', ()=>v['a'])
+        a.e(TypeError, '未定義プロパティへの代入禁止: 0', ()=>v[0]=1)
+        a.e(TypeError, '未定義プロパティへの参照禁止: 0', ()=>v[0])
+        a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>v.x=1)
+        a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>v.x)
+        //a.e(hook.errors.fix, 'Assignment to fix variable.', ()=>v.set('d', 3))
+        a.e(TypeError, '未定義プロパティへの代入禁止: d', ()=>v.d=3)
+        a.e(TypeError, '未定義プロパティへの代入禁止: d', ()=>v['d']=3)
+    })();
+
+    // Enum
+    a.t(1===Object.keys(valk.enums).length)
+    console.log(valk.enums)
+    console.log(valk.enums.CounterCompleted)
+    console.log(valk.enums.CounterCompleted.Error)
+    console.log(valk.enums.CounterCompleted.Error._v)
+    a.t(valk.enums.CounterCompleted.Error._v==='Error')
+    a.t(valk.enums.CounterCompleted.Keep._v==='Keep')
+    a.t(valk.enums.CounterCompleted.Over._v==='Over')
+    a.t(valk.enums.CounterCompleted.Every._v==='Every')
+    a.t(valk.enums.CounterCompleted.Clear._v==='Clear')
+    a.t(valk.enums.CounterCompleted.isTypeOf(valk.enums.CounterCompleted.Error))
+    a.t(valk.enums.CounterCompleted.isTypeOf(valk.enums.CounterCompleted.Keep))
+    a.t(valk.enums.CounterCompleted.isTypeOf(valk.enums.CounterCompleted.Over))
+    a.t(valk.enums.CounterCompleted.isTypeOf(valk.enums.CounterCompleted.Every))
+    a.t(valk.enums.CounterCompleted.isTypeOf(valk.enums.CounterCompleted.Clear))
+    a.f(valk.enums.CounterCompleted.isTypeOf('Error'))
+    a.t(valk.enums.CounterCompleted.isTypeOf(new valk.enums.CounterCompleted.type('Error')))
+    a.f(valk.enums.CounterCompleted.has(new valk.enums.CounterCompleted.type('Error')))
+    a.t(valk.enums.CounterCompleted.has('Error'))
+    a.f(valk.enums.CounterCompleted.hasValue('Error'))
+    a.t(valk.enums.CounterCompleted.hasValue(valk.enums.CounterCompleted.Error))
+    a.t(valk.enums.CounterCompleted.Error instanceof valk.enums.CounterCompleted.type)
+    a.e(ReferenceError, `Key does not exist.: X`, ()=>valk.enums.CounterCompleted.isTypeOf(valk.enums.CounterCompleted.X))
+    a.f(valk.enums.CounterCompleted.isTypeOf('Error'))
+
+    // Enum is系
+    a.t(valk.enums.CounterCompleted.Error.isError)
+    a.t(valk.enums.CounterCompleted.Keep.isKeep)
+    a.t(valk.enums.CounterCompleted.Over.isOver)
+    a.t(valk.enums.CounterCompleted.Every.isEvery)
+    a.t(valk.enums.CounterCompleted.Clear.isClear)
+    a.f(valk.enums.CounterCompleted.Error.isKeep)
+    for (let k of valk.enums.CounterCompleted.keys) {
+        for (let v of valk.enums.CounterCompleted.keys) {
+            const assert = k===v ? 't' : 'f'
+            a[assert](valk.enums.CounterCompleted[k][`is${v}`])
+        }
+    }
+    // Enum match系
+    a.t('エラー'===valk.enums.CounterCompleted.Error.match('エラー','キープ','オーバー','エブリ','クリア'))
+    a.t('キープ'===valk.enums.CounterCompleted.Keep.match('エラー','キープ','オーバー','エブリ','クリア'))
+    a.t('オーバー'===valk.enums.CounterCompleted.Over.match('エラー','キープ','オーバー','エブリ','クリア'))
+    a.t('エブリ'===valk.enums.CounterCompleted.Every.match('エラー','キープ','オーバー','エブリ','クリア'))
+    a.t('クリア'===valk.enums.CounterCompleted.Clear.match('エラー','キープ','オーバー','エブリ','クリア'))
+    a.t('エラー'===valk.enums.CounterCompleted.Error.match(()=>'エラー','キープ','オーバー','エブリ','クリア'))
+    a.t('キープ'===valk.enums.CounterCompleted.Keep.match('エラー',()=>'キープ','オーバー','エブリ','クリア'))
+    a.t('オーバー'===valk.enums.CounterCompleted.Over.match('エラー','キープ',()=>'オーバー','エブリ','クリア'))
+    a.t('エブリ'===valk.enums.CounterCompleted.Every.match('エラー','キープ','オーバー',()=>'エブリ','クリア'))
+    a.t('クリア'===valk.enums.CounterCompleted.Clear.match('エラー','キープ','オーバー','エブリ',()=>'クリア'))
+    a.t('エラー'===valk.enums.CounterCompleted.Error.match('エラー','キープ','オーバー','エブリ','クリア','他'))
+    a.e(TypeError, '引数cbFnsはidsより多くあるべきです: 5個 順: Error,Keep,Over,Every,Clear', ()=>valk.enums.CounterCompleted.Error.match())
+ 
+   
+    // counter
+    a.t(valk.count() instanceof valk.types.Counter)
+    bb.test(valk.count(), [
+        (t)=>{console.log(t);return true},
+        (t)=>0===t.v,
+        (t)=>0===t._v,
+        (t)=>0===t._start,
+        (t)=>Infinity===t._end,
+        (t)=>valk.enums.CounterCompleted.Over===t._onCompletedType,
+        (t)=>{t.count();return 1===t.v;},
+        (t)=>1===t.v&&!t._isCompleted,
+    ])
+    bb.test(valk.count(0), [
+        (t)=>0===t.v,
+        (t)=>0===t._v,
+        (t)=>0===t._start,
+        (t)=>Infinity===t._end,
+        (t)=>!t._isCompletedOnce,
+        (t)=>valk.enums.CounterCompleted.Over===t._onCompletedType,
+        (t)=>{t.count();return 1===t.v;},
+        (t)=>1===t.v && !t._isCompleted && !t._isCompletedOnce,
+    ])
+    bb.test(valk.count(1), [
+        (t)=>{console.log(t);return true},
+        (t)=>0===t.v,
+        (t)=>0===t._v,
+        (t)=>0===t._start,
+        (t)=>1===t._end,
+        (t)=>!t._isCompletedOnce,
+        (t)=>valk.enums.CounterCompleted.Clear===t._onCompletedType,
+        (t)=>{t.count();console.log(t);return 0===t.v;},
+        (t)=>0===t.v && !t._isCompleted && t._isCompletedOnce,
+    ])
+    bb.test(valk.count(-1), [
+        (t)=>1===t.v,
+        (t)=>1===t._v,
+        (t)=>1===t._start,
+        (t)=>0===t._end,
+        (t)=>!t._isCompletedOnce,
+        (t)=>valk.enums.CounterCompleted.Clear===t._onCompletedType,
+        (t)=>{t.count();return 1===t.v;},
+        (t)=>1===t.v && !t._isCompleted && t._isCompletedOnce,
+    ])
+    bb.test(valk.count({type:valk.enums.CounterCompleted.Error}), [
+        (t)=>{console.log(t);return true},
+        (t)=>0===t.v,
+        (t)=>0===t._v,
+        (t)=>0===t._start,
+        (t)=>Infinity===t._end,
+        (t)=>valk.enums.CounterCompleted.Error===t._onCompletedType,
+        (t)=>{t.count();return 1===t.v;},
+    ])
+    bb.test(valk.count(0, {type:valk.enums.CounterCompleted.Error}), [
+        (t)=>{console.log(t);return true},
+        (t)=>0===t.v,
+        (t)=>0===t._v,
+        (t)=>0===t._start,
+        (t)=>Infinity===t._end,
+        (t)=>valk.enums.CounterCompleted.Error===t._onCompletedType,
+        (t)=>{t.count();return 1===t.v;},
+    ])
+    bb.test(valk.count(1, {type:valk.enums.CounterCompleted.Error}), [
+        (t)=>{console.log(t);return true},
+        (t)=>0===t.v,
+        (t)=>0===t._v,
+        (t)=>0===t._start,
+        (t)=>1===t._end,
+        (t)=>valk.enums.CounterCompleted.Error===t._onCompletedType,
+//        new CounterError(`すでにCompletedです。`), (t)=>t.count(),
+    ])
+    a.e(valk.errors.CounterError, `すでにCompletedです。`, ()=>{
+        const c = valk.count(1, {type:valk.enums.CounterCompleted.Error})
+        c.count()
+        c.count()
+    })
+    bb.test(valk.count(-1, {type:valk.enums.CounterCompleted.Error}), [
+        (t)=>{console.log(t);return true},
+        (t)=>1===t.v,
+        (t)=>1===t._v,
+        (t)=>1===t._start,
+        (t)=>0===t._end,
+        (t)=>valk.enums.CounterCompleted.Error===t._onCompletedType,
+    ])
+    a.e(valk.errors.CounterError, `すでにCompletedです。`, ()=>{
+        const c = valk.count(-1, {type:valk.enums.CounterCompleted.Error})
+        c.count()
+        c.count()
+    })
+    bb.test(valk.count(5, 9), [
+        (t)=>{console.log(t);return true},
+        (t)=>5===t.v,
+        (t)=>5===t._v,
+        (t)=>5===t._start,
+        (t)=>9===t._end,
+        (t)=>valk.enums.CounterCompleted.Clear===t._onCompletedType,
+        (t)=>{t.count();return 6===t.v;},
+        (t)=>{t.count();return 7===t.v;},
+        (t)=>{t.count();return 8===t.v;},
+        (t)=>{t.count();return 5===t.v;},
+    ])
+    bb.test(valk.count(9, 5), [
+        (t)=>{console.log(t);return true},
+        (t)=>9===t.v,
+        (t)=>9===t._v,
+        (t)=>9===t._start,
+        (t)=>5===t._end,
+        (t)=>valk.enums.CounterCompleted.Clear===t._onCompletedType,
+        (t)=>{t.count();return 8===t.v;},
+        (t)=>{t.count();return 7===t.v;},
+        (t)=>{t.count();return 6===t.v;},
+        (t)=>{t.count();return 9===t.v;},
+    ])
+    bb.test(valk.count(5, 9, {type:valk.enums.CounterCompleted.Error}), [
+        (t)=>{console.log(t);return true},
+        (t)=>5===t.v,
+        (t)=>5===t._v,
+        (t)=>5===t._start,
+        (t)=>9===t._end,
+        (t)=>valk.enums.CounterCompleted.Error===t._onCompletedType,
+        (t)=>{t.count();return 6===t.v;},
+        (t)=>{t.count();return 7===t.v;},
+        (t)=>{t.count();return 8===t.v;},
+        (t)=>{a.e(valk.errors.CounterError, `すでにCompletedです。`, ()=>{t.count()});return true;},
+    ])
+
+    // typeを指定してみる
+    ;(function(){
+        let completedNum = 0
+        bb.test(valk.count({onComplete:()=>++completedNum}), [
+            (t)=>{console.log(t);return true},
+            (t)=>0===t.v,
+            (t)=>0===t._v,
+            (t)=>0===t._start,
+            (t)=>Infinity===t._end,
+            (t)=>valk.enums.CounterCompleted.Over===t._onCompletedType,
+            (t)=>0===completedNum,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>0===completedNum,
+            (t)=>{t.count();return 2===t.v;},
+            (t)=>0===completedNum,
+        ])
+    })();
+    // Keep
+    ;(function(){
+        let completedNum = 0
+        bb.test(valk.count(1, {type:valk.enums.CounterCompleted.Keep, onComplete:()=>++completedNum}), [
+            (t)=>{console.log(t);return true},
+            (t)=>0===t.v,
+            (t)=>0===t._v,
+            (t)=>0===t._start,
+            (t)=>1===t._end,
+            (t)=>valk.enums.CounterCompleted.Keep===t._onCompletedType,
+            (t)=>0===completedNum,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>1===completedNum,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>1===completedNum,
+        ])
+    })();
+    // Over
+    ;(function(){
+        let completedNum = 0
+        bb.test(valk.count(1, {type:valk.enums.CounterCompleted.Over, onComplete:()=>++completedNum}), [
+            (t)=>{console.log(t);return true},
+            (t)=>0===t.v,
+            (t)=>0===t._v,
+            (t)=>0===t._start,
+            (t)=>1===t._end,
+            (t)=>valk.enums.CounterCompleted.Over===t._onCompletedType,
+            (t)=>0===completedNum,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>1===completedNum,
+            (t)=>{t.count();return 2===t.v;}, // onStep()がonCompleted後も毎回実行される
+            (t)=>1===completedNum,
+        ])
+    })();
+    // Every
+    ;(function(){
+        let completedNum = 0
+        bb.test(valk.count(1, {type:valk.enums.CounterCompleted.Every, onComplete:()=>++completedNum}), [
+            (t)=>{console.log(t);return true},
+            (t)=>0===t.v,
+            (t)=>0===t._v,
+            (t)=>0===t._start,
+            (t)=>1===t._end,
+            (t)=>valk.enums.CounterCompleted.Every===t._onCompletedType,
+            (t)=>0===completedNum,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>1===completedNum,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>2===completedNum, // onCompleted()がonCompleted後も毎回実行される
+        ])
+    })();
+    // Clear
+    ;(function(){
+        let completedNum = 0
+        bb.test(valk.count(1, {type:valk.enums.CounterCompleted.Clear, onComplete:()=>++completedNum}), [
+//            (t)=>{console.log(t);return true},
+            (t)=>0===t.v,
+            (t)=>0===t._v,
+            (t)=>0===t._start,
+            (t)=>1===t._end,
+            (t)=>valk.enums.CounterCompleted.Clear===t._onCompletedType,
+            (t)=>0===completedNum,
+            (t)=>{t.count();return 0===t.v;},
+            (t)=>1===completedNum,
+            (t)=>{t.count();return 0===t.v;},
+            (t)=>2===completedNum, // onCompleted()がonCompleted後も毎回実行される
+        ])
+    })();
+    // Clear（整数値が一つあるパターンだとClearがデフォルト。整数値が一つもないとOverがデフォルト（永遠にCompletedしない））
+    ;(function(){
+        let completedNum = 0
+        bb.test(valk.count(1, {onComplete:()=>++completedNum}), [
+            (t)=>0===t.v,
+            (t)=>0===t._v,
+            (t)=>0===t._start,
+            (t)=>1===t._end,
+            (t)=>valk.enums.CounterCompleted.Clear===t._onCompletedType,
+            (t)=>0===completedNum,
+            (t)=>{t.count();return 0===t.v;},
+            (t)=>1===completedNum,
+            (t)=>{t.count();return 0===t.v;},
+            (t)=>2===completedNum, // onCompleted()がonCompleted後も毎回実行される
+        ])
+    })();
+
+    // 10回3セット
+    ;(function(){
+        const set = valk.count(3)
+        const time = valk.count(10, {onComplete:()=>set.count()})
+        let completedNum = 0
+        bb.test(time, [
+            (t)=>0===t.v,
+            (t)=>0===t._v,
+            (t)=>0===t._start,
+            (t)=>10===t._end,
+            (t)=>valk.enums.CounterCompleted.Clear===t._onCompletedType,
+            (t)=>0===completedNum,
+            (t)=>0===set.v,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>{t.count();return 2===t.v;},
+            (t)=>{t.count();return 3===t.v;},
+            (t)=>{t.count();return 4===t.v;},
+            (t)=>{t.count();return 5===t.v;},
+            (t)=>{t.count();return 6===t.v;},
+            (t)=>{t.count();return 7===t.v;},
+            (t)=>{t.count();return 8===t.v;},
+            (t)=>{t.count();return 9===t.v;},
+            (t)=>{t.count();return 0===t.v;},
+            (t)=>1===set.v && !set.isCompleted,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>{t.count();return 2===t.v;},
+            (t)=>{t.count();return 3===t.v;},
+            (t)=>{t.count();return 4===t.v;},
+            (t)=>{t.count();return 5===t.v;},
+            (t)=>{t.count();return 6===t.v;},
+            (t)=>{t.count();return 7===t.v;},
+            (t)=>{t.count();return 8===t.v;},
+            (t)=>{t.count();return 9===t.v;},
+            (t)=>{t.count();return 0===t.v;},
+            (t)=>2===set.v && !set.isCompleted,
+            (t)=>{t.count();return 1===t.v;},
+            (t)=>{t.count();return 2===t.v;},
+            (t)=>{t.count();return 3===t.v;},
+            (t)=>{t.count();return 4===t.v;},
+            (t)=>{t.count();return 5===t.v;},
+            (t)=>{t.count();return 6===t.v;},
+            (t)=>{t.count();return 7===t.v;},
+            (t)=>{t.count();return 8===t.v;},
+            (t)=>{t.count();return 9===t.v;},
+            (t)=>{t.count();return 0===t.v;},
+            (t)=>{console.log(set);return 0===set.v && set.isCompleted},
+        ])
+    })();
+
+
+
+
+    // Some
+//    console.log(valk.some(0, [0, 10, 20]).typeName)
+//    console.log(valk.some(0, new Set([0, 10, 20])).typeName)
+//    a.t('Proxy(valk.Some(0,10,20))'===valk.some(0, [0, 10, 20]).typeName)
+//    a.t('Proxy(valk.Some(0,10,20))'===valk.some(0, new Set([0, 10, 20])).typeName)
+//    a.t('Proxy(valk.Some)'===valk.some(0, [0, 10, 20]).typeName)
+//    a.t('Proxy(valk.Some)'===valk.some(0, new Set([0, 10, 20])).typeName)
+    a.t(0===valk.some(0, ([0, 10, 20])).v)
+    a.t(0===valk.some(0, new Set([0, 10, 20])).v)
+    a.t(()=>{
+        const s = valk.some(0, new Set([0, 10, 20]))
+        s.v = 10
+        return 10===s.v
+    })
+    a.e(valk.errors.SomeError, `Only the specified value can be assigned.`, ()=>{
+        const s = valk.some(0, new Set([0, 10, 20]))
+        s.v = 9
+    })
+    a.e(TypeError, `未定義プロパティへの参照禁止: x`, ()=>{
+    //a.e(ReferenceError, `Property does not exist: x`, ()=>{
+        const s = valk.some(0, new Set([0, 10, 20]))
+        s.x
+    })
+    a.e(TypeError, `未定義プロパティへの代入禁止: x`, ()=>{
+    //a.e(ReferenceError, `Property does not exist: x`, ()=>{
+        const s = valk.some(0, new Set([0, 10, 20]))
+//        console.log('typeName' in s, s.typeName)
+        s.x = 9
+    })
+    a.t(()=>'ダメ'===valk.some(0, ([0, 10, 20])).match('ダメ', 'マア', 'ヨシ'))
+    a.t(()=>'ダメ'===valk.some(0, ([0, 10, 20])).match(()=>'ダメ', ()=>'マア', ()=>'ヨシ'))
+    ;(function(){
+        class C { constructor(v){this._v=v} get v() {return this._v} }
+        const cs = ['ダメ', 'マア', 'ヨシ'].map(v=>new C(v))
+        a.t(()=>'ダメ'===valk.some(0, ([0, 10, 20])).match(...cs.map(c=>c.v)))
+    })();
+    // Some candidates 変更できてしまう
+    a.t(()=>{
+        const s = valk.some(0, [0, 10, 20], true)
+        s.v = 10
+        s.candidates.add(30) // 追加できてしまう
+        s.candidates.delete(0) // 削除できてしまう
+        return 10===s.v && s.candidates.has(30) && !s.candidates.has(0)
+    })
+    a.t(()=>{
+        const s = valk.some(0, new Set([0, 10, 20]), true)
+        s.v = 10
+        s.candidates.add(30) // 追加できてしまう
+        s.candidates.delete(0) // 削除できてしまう
+        return 10===s.v && s.candidates.has(30) && !s.candidates.has(0)
+    })
+    a.t(()=>{
+        const s = valk.some(0, new Set([0, 10, 20]), true)
+        s.v = 10
+        s.candidates.clear() // 全削除できてしまう！
+        return 10===s.v && [0,10,20].every(v=>!s.candidates.has(v))
+    })
+    a.e(valk.errors.SomeError, `Only the specified value can be assigned.`, ()=>{
+        const s = valk.some(0, new Set([0, 10, 20]), true)
+        s.v = 10
+        s.candidates.clear() // 全削除できてしまう！
+        s.v = 10             // 全削除したから何を代入してもエラー！もう何の役にも立たない！
+    })
+    // Some candidates fix（変更不可）
+    a.e(valk.errors.FixError, 'Assignment to fix variable.', ()=>{
+        const s = valk.some(0, [0, 10, 20])
+        s.candidates.add(30) // 追加できない
+    })
+    a.e(valk.errors.FixError, 'Assignment to fix variable.', ()=>{
+        const s = valk.some(0, [0, 10, 20])
+        s.candidates.delete(30) // 削除できない
+    })
+    a.e(valk.errors.FixError, 'Assignment to fix variable.', ()=>{
+        const s = valk.some(0, [0, 10, 20])
+        s.candidates.clear() // 削除できない
+    })
+    a.t(()=>{
+        const s = valk.some(0, [0, 10, 20])
+        s.v = 10
+        return 10===s.v
+    })
+
+    // Range
+//    a.t('Proxy(valk.Range)'===valk.range(0, 100).typeName)
+//    a.t('Proxy(valk.Range)'===valk.range(0, 0, 100).typeName)
+    a.e(TypeError, `引数の数は2〜3つのみ有効です。[min, max], [iniVal, min, max]`, ()=>valk.range())
+    a.e(TypeError, `引数の数は2〜3つのみ有効です。[min, max], [iniVal, min, max]`, ()=>valk.range(0))
+    a.e(TypeError, `引数の数は2〜3つのみ有効です。[min, max], [iniVal, min, max]`, ()=>valk.range(0,1,2,3))
+    a.e(TypeError, `引数はすべて整数型にしてください。`, ()=>valk.range(0, '100'))
+    a.t(()=>0===valk.range(0, 100).v)
+    a.t(()=>5===valk.range(5, 9).v)        // 0を含まないなら初期値は最小値
+    a.t(()=>0===valk.range(-10, +10).v)    // 0を含むなら初期値は0
+    a.t(()=>3===valk.range(3, -10, +10).v) // 0を含もうとも初期値は指定値
+    a.t(()=>3===valk.range(3, +10, -10).v) // 最小／最大が逆転してもOK
+    a.e(TypeError, `minとmaxは同値を許しません。異なる整数値にしてください。`, ()=>valk.range(0,0))
+    a.e(TypeError, `minとmaxは同値を許しません。異なる整数値にしてください。`, ()=>valk.range(0,0,0))
+    a.t(()=>{
+        const r = valk.range(0, 100)
+        return 0===r.v && 0===r.min && 100===r.max
+    })
+    a.t(()=>{ // 0を含まないなら初期値は最小値
+        const r = valk.range(5, 9)
+        return 5===r.v && 5===r.min && 9===r.max
+    })
+    a.t(()=>{// 0を含むなら初期値は0
+        const r = valk.range(-10, +10)
+        return 0===r.v && -10===r.min && +10===r.max
+    })
+    a.t(()=>{// 0を含もうとも初期値は指定値
+        const r = valk.range(3, -10, +10)
+        return 3===r.v && -10===r.min && +10===r.max
+    })
+    a.t(()=>{// 最小／最大が逆転してもOK
+        const r = valk.range(3, +10, -10)
+        return 3===r.v && -10===r.min && +10===r.max
+    })
+    a.t(()=>{// within
+        const r = valk.range(0, 0, 100)
+        return '赤'===r.within({
+             0:'赤',
+            30:'可',
+            70:'良',
+            90:'優',
+        })
+    })
+    a.t(()=>{// within
+        const r = valk.range(29, 0, 100)
+        return '赤'===r.within({
+             0:'赤',
+            30:'可',
+            70:'良',
+            90:'優',
+        })
+    })
+    a.t(()=>{// within
+        const r = valk.range(30, 0, 100)
+        return '可'===r.within({
+             0:'赤',
+            30:'可',
+            70:'良',
+            90:'優',
+        })
+    })
+    a.t(()=>{// within
+        const r = valk.range(69, 0, 100)
+        return '可'===r.within({
+             0:'赤',
+            30:'可',
+            70:'良',
+            90:'優',
+        })
+    })
+    a.t(()=>{// within
+        const r = valk.range(70, 0, 100)
+        return '良'===r.within({
+             0:'赤',
+            30:'可',
+            70:'良',
+            90:'優',
+        })
+    })
+    a.t(()=>{// within
+        const r = valk.range(89, 0, 100)
+        return '良'===r.within({
+             0:'赤',
+            30:'可',
+            70:'良',
+            90:'優',
+        })
+    })
+    a.t(()=>{// within
+        const r = valk.range(90, 0, 100)
+        console.log(r.within({
+             0:'赤',
+            30:'可',
+            70:'良',
+            90:'優',
+        })
+)
+        return '優'===r.within({
+             0:'赤',
+            30:'可',
+            70:'良',
+            90:'優',
+        })
+    })
+    a.t(()=>{// within
+        const r = valk.range(100, 0, 100)
+        return '優'===r.within({
+             0:'赤',
+            30:'可',
+            70:'良',
+            90:'優',
+        })
+    })
+    a.t(()=>{// within
+        const r = valk.range(0, 0, 100)
+        return '赤'===r.within({
+            30:'可',
+            90:'優',
+             0:'赤',
+            70:'良',
+        })
+    })
+    a.t(()=>{// within 順不同
+        const r = valk.range(100, 0, 100)
+        return '優'===r.within({
+            30:'可',
+            90:'優',
+             0:'赤',
+            70:'良',
+        })
+    })
+    a.t(()=>{// within 負数
+        const r = valk.range(0, -10, +10)
+        return '良'===r.within({
+//             -10:'赤', // SyntaxError: Unexpected token '-'
+//           (-10)':'赤', // SyntaxError: Unexpected token '('
+            '-10':'赤',
+            ' -5':'可',
+                0:'良',
+                5:'優',
+        })
+    })
+
+    // within 範囲外threshold 最大値超過
+    a.e(RangeError, `Out of range thresholds[4] 101: 0..100`, ()=>{
+        const r = valk.range(100, 0, 100)
+        return  '優'===r.within({
+              0:'赤',
+             30:'可',
+             70:'良',
+             90:'優',
+            101:'杉',
+        })
+    })
+    // within 範囲外threshold 最小値がない
+    a.e(TypeError, `Start the threshold at the minimum value.`, ()=>{
+        const r = valk.range(100, 0, 100)
+        return   '優'===r.within({
+               1:'赤',
+              30:'可',
+              70:'良',
+              90:'優',
+        })
+    })
+    // within 範囲外threshold 最小値超過
+    a.e(RangeError, `Out of range thresholds[0] -1: 0..100`, ()=>{
+        const r = valk.range(100, 0, 100)
+        return  '優'===r.within({
+//             -1:'赤', // SyntaxError: Unexpected token '-'
+//           (-1)':'赤', // SyntaxError: Unexpected token '('
+           '-1':'赤',
+             30:'可',
+             70:'良',
+             90:'優',
+        })
+    })
+
+
+    // SomeChanged
+    a.t(0===valk.someChanged(0, ([0, 10, 20])).v)
+    a.t(0===valk.someChanged(0, new Set([0, 10, 20])).v)
+    a.t(()=>{
+        const s = valk.someChanged(0, new Set([0, 10, 20]))
+        s.v = 10
+        return 10===s.v
+    })
+    a.e(valk.errors.SomeError, `Only the specified value can be assigned.`, ()=>{
+        const s = valk.someChanged(0, new Set([0, 10, 20]))
+        s.v = 9
+    })
+    a.e(TypeError, `未定義プロパティへの参照禁止: x`, ()=>{
+    //a.e(ReferenceError, `Property does not exist: x`, ()=>{
+        const s = valk.someChanged(0, new Set([0, 10, 20]))
+        s.x
+    })
+    a.e(TypeError, `未定義プロパティへの代入禁止: x`, ()=>{
+    //a.e(ReferenceError, `Property does not exist: x`, ()=>{
+        const s = valk.someChanged(0, new Set([0, 10, 20]))
+//        console.log('typeName' in s, s.typeName)
+        s.x = 9
+    })
+    a.t(()=>'ダメ'===valk.someChanged(0, ([0, 10, 20])).match('ダメ', 'マア', 'ヨシ'))
+    a.t(()=>'ダメ'===valk.someChanged(0, ([0, 10, 20])).match(()=>'ダメ', ()=>'マア', ()=>'ヨシ'))
+    ;(function(){
+        class C { constructor(v){this._v=v} get v() {return this._v} }
+        const cs = ['ダメ', 'マア', 'ヨシ'].map(v=>new C(v))
+        a.t(()=>'ダメ'===valk.someChanged(0, ([0, 10, 20])).match(...cs.map(c=>c.v)))
+    })();
+    // Some candidates 変更不可
+    a.e(valk.errors.FixError, `Assignment to fix variable.`, ()=>{
+        const s = valk.someChanged(0, [0, 10, 20], true)
+        s.v = 10
+        s.candidates.add(30) // 追加できない
+//        s.candidates.delete(0) // 削除できない
+        return 10===s.v && s.candidates.has(30) && !s.candidates.has(0)
+    })
+    a.e(valk.errors.FixError, `Assignment to fix variable.`, ()=>{
+        const s = valk.someChanged(0, new Set([0, 10, 20]), true)
+        s.v = 10
+//        s.candidates.add(30) // 追加できない
+        s.candidates.delete(0) // 削除できない
+//        return 10===s.v && s.candidates.has(30) && !s.candidates.has(0)
+    })
+    a.e(valk.errors.FixError, `Assignment to fix variable.`, ()=>{
+        const s = valk.someChanged(0, new Set([0, 10, 20]), true)
+//        s.v = 10
+        s.candidates.clear() // 全削除できない
+//        return 10===s.v && [0,10,20].every(v=>!s.candidates.has(v))
+    })
+    // Some candidates fix（変更不可）
+    a.e(valk.errors.FixError, 'Assignment to fix variable.', ()=>{
+        const s = valk.someChanged(0, [0, 10, 20])
+        s.candidates.add(30) // 追加できない
+    })
+    a.e(valk.errors.FixError, 'Assignment to fix variable.', ()=>{
+        const s = valk.someChanged(0, [0, 10, 20])
+        s.candidates.delete(30) // 削除できない
+    })
+    a.e(valk.errors.FixError, 'Assignment to fix variable.', ()=>{
+        const s = valk.someChanged(0, [0, 10, 20])
+        s.candidates.clear() // 削除できない
+    })
+    a.t(()=>{
+        const s = valk.someChanged(0, [0, 10, 20])
+        s.v = 10
+        return 10===s.v
+    })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    a.fin()
+    /*
+    // 未定義プロパティへの参照・代入禁止
+    // オブジェクト
+    const obj = Fix.obj({
+        A: {
+            a: {
+                bool: true,
+                int: 1,
+                str: 'A',
+                fn: ()=>true,
+            }
+        },
+        B: 2,
+    })
+    console.log(obj)
+
+    try { const E='オブジェクトに存在しないプロパティへの代入を許してしまった！新しくプロパティが生成されてしまった！'; obj.x = E; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの代入禁止: x'===err.message, err.message) }
+
+    try { const E='オブジェクトに存在しないプロパティの参照を許してしまった！'; obj.x; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの参照禁止: x'===err.message, err.message) }
+
+    try { const E='オブジェクトに存在するプロパティへの代入を許してしまった！既存プロパティが上書きされてしまった！'; obj.A = E; console.error(E); }
+    catch (err) { console.assert('定義済プロパティへの代入禁止: A'===err.message, err.message) }
+
+    console.assert(obj instanceof Object)
+    console.assert('Object'===obj.constructor.name)
+    console.assert(obj.A.a.bool)
+    console.assert(1===obj.A.a.int)
+    console.assert('A'===obj.A.a.str)
+    console.assert('function'===typeof obj.A.a.fn)
+    obj.A.a.int = 2
+    console.assert(2===obj.A.a.int)
+
+
+
+    // クラス
+    class C {
+        static sm() { return 1 }
+        constructor(v) {this._v = v}
+        set v(v) { this._v = v + 1 }
+        get v() { return this._v }
+    }
+    C = Fix.cls(C)
+    const c = new C()
+
+    try { const E='クラスに存在しないプロパティへの代入を許してしまった！新しくプロパティが生成されてしまった！'; C.x = E; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの代入禁止: x'===err.message, err.message) }
+
+    try { const E='クラスに存在しないプロパティの参照を許してしまった！'; C.x; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの参照禁止: x'===err.message, err.message) }
+
+    try { const E='クラスに存在するプロパティへの代入を許してしまった！プロパティが上書きされてしまった！'; C.sm = E; console.error(E); }
+    catch (err) { console.assert('定義済プロパティへの代入禁止: sm'===err.message, err.message) }
+
+    try { const E='インスタンスに存在しないプロパティへの代入を許してしまった！新しくプロパティが生成されてしまった！'; c.y = E; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの代入禁止: y'===err.message, err.message) }
+
+    try { const E='インスタンスに存在しないプロパティの参照を許してしまった！'; c.y; console.error(E); }
+    catch (err) { console.assert('未定義プロパティへの参照禁止: y'===err.message, err.message) }
+
+    console.assert(c instanceof C)
+    console.assert(undefined===c.v)
+    c.v = 1
+    console.assert(2===c.v)
+    c._v = 3
+    console.assert(3===c.v)
+
+
+    // 値
+    ;(function(){
+        const v = Fix.val(1)
+        console.assert(1===v.v)
+        try { const E='定義済プロパティへの代入を許してしまった！'; v.v = 2; console.error(E); }
+        catch (err) { console.assert('定義済プロパティへの代入禁止: v'===err.message, err.message) }
+
+        try { const E='値に存在しないプロパティへの代入を許してしまった！新しくプロパティが生成されてしまった！'; v.x = E; console.error(E); }
+        catch (err) { console.assert('未定義プロパティへの代入禁止: x'===err.message, err.message) }
+
+        try { const E='値に存在しないプロパティの参照を許してしまった！'; v.x; console.error(E); }
+        catch (err) { console.assert('未定義プロパティへの参照禁止: x'===err.message, err.message) }
+    })();
+
+    ;(function(){
+        const v = Fix.val(1, 'key')
+        console.assert(1===v.v)
+        v.v = 2
+        console.assert(2===v.v)
+
+        try { const E='値に存在しないプロパティへの代入を許してしまった！新しくプロパティが生成されてしまった！'; v.x = E; console.error(E); }
+        catch (err) { console.assert('未定義プロパティへの代入禁止: x'===err.message, err.message) }
+
+        try { const E='値に存在しないプロパティの参照を許してしまった！'; v.x; console.error(E); }
+        catch (err) { console.assert('未定義プロパティへの参照禁止: x'===err.message, err.message) }
+    })();
+    */
+})
+</script>
