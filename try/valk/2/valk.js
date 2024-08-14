@@ -285,6 +285,57 @@ class SomeChanged {
         return undefined
     }
 }
+class TypedAry {
+    static of(v, onValidate, opts={}, insOpts={}) { return new TypedAry(v, onValidate, opts, insOpts) }
+    constructor(v, onValidate, opts={}, insOpts={}) {
+        console.log(v, onValidate, opts, insOpts)
+        console.log(Type)
+        console.log(Type.isStr(onValidate))
+        console.log(`is${onValidate.capitalize()}`)
+        console.log(`is${onValidate.capitalize()}` in Type)
+        /*
+        */
+        if (Type.isStr(onValidate) && `is${onValidate.capitalize()}` in Type) {
+            console.log(onValidate)
+            console.log(onValidate.capitalize())
+            console.log(`is${onValidate.capitalize()}`)
+            console.log(`is${onValidate.capitalize()}` in Type)
+            console.log(Type[`is${onValidate.capitalize()}`])
+            console.log(Type[`is${onValidate.capitalize()}`](v))
+            const typeNm = onValidate.capitalize()
+            onValidate = (target, name, args, o)=>{
+                if (Type.isAry(args)) { args.every(v=>Type[`is${typeNm}`](v)) }
+                else { return Type[`is${typeNm}`](args) }
+                if ('push'===name) { return Type[`is${typeNm}`](args) }
+                return false
+            }
+            //onValidate = (v)=>Type[`is${onValidate.capitalize()}`](v)
+        }
+        if (!Type.isFn(onValidate)) { throw new TypeError(`onValidateは真偽値を返す関数かTypeに含まれるis系メソッド名であるべきです。`) }
+    //constructor(v, opts={}, insOpts={}) {
+        //super(v, opts, insOpts)
+        return hook.ary(v, {onValidate:onValidate, ...opts}, insOpts)
+    }
+}
+/*
+class TypedAry extends hook.types.ary {
+    static of(v, onValidate, opts={}, insOpts={}) { return new TypedAry(v, onValidate, opts, insOpts) }
+    constructor(v, onValidate, opts={}, insOpts={}) {
+        console.log(v, onValidate, opts, insOpts)
+        console.log(Type)
+        console.log(Type.isStr(onValidate))
+        console.log(`is${onValidate.capitalize()}`)
+        console.log(`is${onValidate.capitalize()}` in Type)
+        if (Type.isStr(onValidate) && `is${onValidate.capitalize()}` in Type) {
+            onValidate = (v)=>Type[`is${onValidate.capitalize()}`](v)
+        }
+        if (!Type.isFn(onValidate)) { throw new TypeError(`onValidateは真偽値を返す関数かTypeに含まれるis系メソッド名であるべきです。`) }
+    //constructor(v, opts={}, insOpts={}) {
+        //super(v, opts, insOpts)
+        super(v, {onValidate:onValidate, ...opts}, insOpts)
+    }
+}
+*/
 window.valk = Object.deepFreeze({
     fix:(v, options={}, insOpts={})=>ifel(v instanceof Array, ()=>FixAry.of(v,options,insOpts),
             v instanceof Set, ()=>FixSet.of(v,options,insOpts),
@@ -297,7 +348,7 @@ window.valk = Object.deepFreeze({
     range:(...args)=>Range.of(...args),
     some:(...args)=>Some.of(...args),
     someChanged:(...args)=>SomeChanged.of(...args),
-    typed:(...args)=>null,
+    typed:(...args)=>TypedAry.of(...args),
     valid:(...args)=>null,
     changed:(...args)=>null,
     enums: Enum.types,
@@ -314,6 +365,7 @@ window.valk = Object.deepFreeze({
         EnumError: EnumError,
         CounterError: CounterError,
         SomeError: SomeError,
+        ValidError: ValidError,
     },
 })
 })();

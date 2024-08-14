@@ -1319,9 +1319,17 @@ window.addEventListener('load', async(e)=>{
     })
 
 
-
-
-
+    // valk.typed
+    // TypedAry
+    a.t(()=>{
+        const l = valk.typed([2,4,6], `int`, {onValid:()=>console.log('VALID'), onInvalid:()=>console.log('INVALID')})
+        l.push(7)
+        return true
+    })
+    a.e(valk.errors.ValidError, 'Invalid value.', ()=>{
+        const l = valk.typed([2,4,6], `int`)
+        l.push('a')
+    })
 
 
 

@@ -112,7 +112,8 @@ class Type {
         Object.defineProperty(this, name, {
             value: (...args)=>getter(...args),
             writable: false,
-            enumerable: false,
+            //enumerable: false,
+            enumerable: true,
             configurable: false,
         })
     }
@@ -201,7 +202,7 @@ class Type {
     }
 }
 window.Type = new Type()
-String.prototype.capitalize = function(str) { return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase() }
+String.prototype.capitalize = function() { return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase() }
 })()
 // 糖衣構文 if else-if else (...) {return} を再現する
 function ifel(...args) {
