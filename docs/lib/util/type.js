@@ -214,3 +214,40 @@ function ifel(...args) {
     }
     if (setNum*2<args.length) { return Type.fnV(args[setNum*2]) }
 }
+// Auguments.of(auguments).match(
+//     `int`, (...args)=>someInt(...args),
+//     `int,str`, (...args)=>someIntStr(...args),
+// )
+class Auguments {
+    static of(args) { return new Auguments(args) }
+    constructor(args) { this._args = args }
+    match(...condFns) {
+        if (condFns.length<2) { throw TypeError(`引数は2つ以上必要です。[cond1, retFn1, cond2, retFn2, ..., defFn]`) }
+        const setNum = Math.floor(condFns.length/2);
+        for (let i=0; i<setNum*2; i+=2) {
+            const metNms = this._getMethodNames(condFns[i], i)
+            if (this._matchTypes(metNms)) { return condFns[i+1](...this._args) }
+            else { continue }
+        }
+        if (setNum*2<condFns.length) { return condFns[setNum*2](...this._args) }
+        throw new TypeError(`どの引数パターンとも一致しませんでした。`)
+    }
+    _getMethodNames(condStr, i) {
+        if (!Type.isStr(condStr)) { throw new TypeError(`引数condFns[${i}]はTypeにあるis系メソッド名の型名(文字列型)であるべきです。不正値(型名): ${this.getName(condStr)}`) }
+        const metNms = []
+        for (let name of condStr.split(',')) {
+            const metNm = `is${name.trim().capitalize()}`
+            console.log(metNm, metNm in Type, Type)
+            if (!(metNm in Type)) { throw new TypeError(`引数condFns[${i}]はTypeにあるis系メソッド名の型名であるべきです。不正値: ${name}`) }
+            metNms.push(metNm)
+        }
+        return metNms
+    }
+    _matchTypes(metNms) {
+        if (this._args.length!==metNms.length) { return false }
+        for(let i=0; i<metNms.length; i++) {
+            if (!Type[metNms[i]](this._args[i])) { return false }
+        }
+        return true
+    }
+}
