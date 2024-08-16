@@ -1324,6 +1324,7 @@ window.addEventListener('load', async(e)=>{
     a.t(()=>{
         //const l = valk.typed([2,4,6], `int`, {onValid:()=>console.log('VALID'), onInvalid:()=>console.log('INVALID')})
         const l = valk.typed([2,4,6], `int`)
+        console.log(l)
         l.push(7)
         return true
     })
@@ -1339,7 +1340,7 @@ window.addEventListener('load', async(e)=>{
         return true
     })
     a.e(valk.errors.ValidError, 'Invalid value.', ()=>{
-        const l = valk.typed([2,4,6], `int`)
+        const l = valk.typed([2,4,6,7], `int`)
         const actual = l.concat('a')
     })
     a.t(()=>{
@@ -1349,6 +1350,12 @@ window.addEventListener('load', async(e)=>{
         console.log(actual)
         console.log([2,4,6].splice(2, 0, 7))
         return true
+    })
+    a.t(()=>{
+        //const l = valk.typed([2,4,6], `int`, {onValid:()=>console.log('VALID'), onInvalid:()=>console.log('INVALID')})
+        const l = valk.typed([2,4,6], `int`)
+        console.log(l, l[0])
+        return 2===l[0]
     })
 
 

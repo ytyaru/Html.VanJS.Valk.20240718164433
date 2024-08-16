@@ -167,7 +167,7 @@ class ObjItr {
     }
 }
 const HookableContainer = superClass => class extends superClass {
-    constructor(v, options={}, insOpts={}) {
+    constructor(v, options={}, insOpts={}, hookableMethodNames=[], notHookableMethodNames=[]) {
         if (Set===superClass) { super(v) }
         else if (Map===superClass) {
             if (Type.isObj(v)) { super(Object.entries(v)) }
@@ -186,15 +186,21 @@ const HookableContainer = superClass => class extends superClass {
             onUnchanged: (i,v,o)=>{},
             onAfter: ()=>{},
         }, ...options}
+        console.log('onValidate:', this._options.onValidate, options)
+        this._hookableMethodNames = hookableMethodNames
+        this._notHookableMethodNames = notHookableMethodNames
         this._defineDestoryMethods()
         this._defineNotDestoryMethods()
         return InsProxy.of(this, insOpts)
     }
     _defineDestoryMethods() {
-        const names = Object===superClass ? Object.keys(this) : destroyMethods[superClass.name]
+        const names = (Type.isAry(this._hookableMethodNames) && 0<this._hookableMethodNames.length) ? this._hookableMethodNames : (Object===superClass ? Object.keys(this) : destroyMethods[superClass.name]);
+        //const names = Object===superClass ? Object.keys(this) : destroyMethods[superClass.name]
+        console.log('names:', names)
         for (let name of names) {
             Object.defineProperty(this, name, {
                 value:(...args)=>{
+                    console.log('HookableContainer:', name, args)
                     this._options.onBefore()
                     const o = Type.toStr(this) // ディープコピー（全文字列化）
                     let r;
@@ -207,14 +213,22 @@ const HookableContainer = superClass => class extends superClass {
                     this._options.onAfter()
                     return r
                 },
+                configurable:true,
+                enumerable:true,
+                writable:true,
             })
         }
     }
     _defineNotDestoryMethods() {
-        const names = Object===superClass ? Object.keys(this) : notDestroyMethods[superClass.name]
+        const names = (Type.isAry(this._notHookableMethodNames) && 0<this._notHookableMethodNames.length) ? this._notHookableMethodNames: (Object===superClass ? Object.keys(this) : notDestroyMethods[superClass.name])
+        //const names = Object===superClass ? Object.keys(this) : notDestroyMethods[superClass.name]
+        console.log('names:', names)
         for (let name of names) {
             Object.defineProperty(this, name, {
                 value:(...args)=>super[name](...args),
+                configurable:true,
+                enumerable:true,
+                writable:true,
             })
         }
     }
@@ -232,6 +246,8 @@ const HookableContainer = superClass => class extends superClass {
 class HookAry extends HookableContainer(Array) { constructor(v, opts={}, insOpts={}) { super(v, opts, insOpts) } }
 class HookSet extends HookableContainer(Set) { constructor(v, opts={}, insOpts={}) { super(v, opts, insOpts) } }
 class HookMap extends HookableContainer(Map) { constructor(v, opts={}, insOpts={}) { super(v, opts, insOpts) } }
+const types = Object.assign(...[HookVal, HookObj, HookAry, HookSet, HookMap].map(cls=>[cls.name.replace('Hook','').toLowerCase(), Object.freeze(cls)]).map(([k,v])=>({[k]:v})))
+types.HookableContainer = HookableContainer 
 window.hook = Object.deepFreeze({
     ins: (target, options={})=>InsProxy.of(target, options),
     val: (v, options={}, insOpts={})=>HookVal.of(v, options, insOpts),
@@ -239,7 +255,8 @@ window.hook = Object.deepFreeze({
     ary: (v, options={}, insOpts={})=>new HookAry(v, options, insOpts),
     set: (v, options={}, insOpts={})=>new HookSet(v, options, insOpts),
     map: (v, options={}, insOpts={})=>new HookMap(v, options, insOpts),
-    types: Object.assign(...[HookVal, HookObj, HookAry, HookSet, HookMap].map(cls=>[cls.name.replace('Hook','').toLowerCase(), Object.freeze(cls)]).map(([k,v])=>({[k]:v}))),
+    types: types,
+    //types: Object.assign(...[HookVal, HookObj, HookAry, HookSet, HookMap].map(cls=>[cls.name.replace('Hook','').toLowerCase(), Object.freeze(cls)]).map(([k,v])=>({[k]:v}))),
     errors: {
         fix: FixError,
         valid: ValidError,
