@@ -1357,6 +1357,13 @@ window.addEventListener('load', async(e)=>{
         console.log(l, l[0])
         return 2===l[0]
     })
+    a.t(()=>{
+        let count = 0;
+        const l = valk.typed([2,4,6], `int`, {onValid:()=>++count})
+        l.push(7)
+        return 4===l.length && 2===l[0] && 4===l[1] && 6===l[2] && 7===l[3]
+    })
+
 
 
 
