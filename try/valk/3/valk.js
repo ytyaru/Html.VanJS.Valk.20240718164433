@@ -296,8 +296,7 @@ class TypedAry extends hook.types.HookableContainer(Array) {
             const typeNm = onValidate.capitalize()
             //this._options.onValidate = (target, name, args, o)=>{
             onValidate = (target, name, args, o)=>{
-                console.warn('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
-                console.log('onValidate:', name, args)
+                //console.log('onValidate:', name, args)
                 if (Type.isAry(args)) { args.every(v=>Type[`is${typeNm}`](v)) }
                 else { return Type[`is${typeNm}`](args) }
                 if ('concat'===name) {
@@ -313,12 +312,12 @@ class TypedAry extends hook.types.HookableContainer(Array) {
                 }
                 else if ('fill'===name) {return Type[`is${typeNm}`](args[0])}
                 else if ('push'===name) { return args.every(v=>Type[`is${typeNm}`](v)) }
-                else if ('splice'===name) {console.log(args);return Type.isAry(args[2]) ? args[2].every(v=>Type[`is${typeNm}`](v)) : Type[`is${typeNm}`](args[2])}
+                else if ('splice'===name) {return Type.isAry(args[2]) ? args[2].every(v=>Type[`is${typeNm}`](v)) : Type[`is${typeNm}`](args[2])}
                 else if ('toSpliced'===name) {return args[2].every(v=>Type[`is${typeNm}`](v))}
                 return false
             }
         }
-        console.log(onValidate)
+//        console.log(onValidate)
 //        console.log(onValidate, this._options.onValidate)
         //if (!Type.isFn(this._options.onValidate)) { throw new TypeError(`onValidateは真偽値を返す関数かTypeに含まれるis系メソッド名であるべきです。`) }
 //        if (!Type.isFn(onValidate)) { throw new TypeError(`onValidateは真偽値を返す関数かTypeに含まれるis系メソッド名であるべきです。`) }
@@ -330,6 +329,7 @@ class TypedAry extends hook.types.HookableContainer(Array) {
         //super(v, opts, insOpts, TypedAry.HookableMethodNames, TypedAry.NotHookableMethodNames)
         //super(v, opts, {onValidate:onValidate, ...insOpts}, TypedAry.HookableMethodNames, TypedAry.NotHookableMethodNames)
         //super(v, {onValidate:onValidate, ...opts}, insOpts, TypedAry.HookableMethodNames, TypedAry.NotHookableMethodNames)
+        console.log(opts)
         super(v, opts, insOpts, TypedAry.HookableMethodNames, TypedAry.NotHookableMethodNames)
     }
 }
