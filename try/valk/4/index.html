@@ -300,10 +300,13 @@ window.addEventListener('load', async(e)=>{
     ;(function(){
         let count = 0;
         const l = hook.ary([], {onChanged:()=>++count})
+        console.log(l)
         console.log(hook.types)
+        console.log(Type.isIns(l))
         a.t(Type.isIns(l, hook.types.ary))
         a.t(l instanceof hook.types.ary)
         l.push(3)
+        console.log(l)
         a.t(1===l.length)
         a.t(3===l[0])
         a.t(1===count)
@@ -584,8 +587,10 @@ window.addEventListener('load', async(e)=>{
         a.t(4===v[1])
         a.t(6===v[2])
         a.e(TypeError, '定義済プロパティへの代入禁止: 0', ()=>v[0]=1)
-        a.e(TypeError, '未定義プロパティへの代入禁止: 3', ()=>v[3]=1)
-        a.e(TypeError, '未定義プロパティへの参照禁止: 3', ()=>v[3])
+        //a.e(TypeError, '未定義プロパティへの代入禁止: 3', ()=>v[3]=1)
+        a.e(RangeError, `指定された添字は配列の長さを超過しています: idx:3, len:3`, ()=>v[3]=1)
+        //a.e(TypeError, '未定義プロパティへの参照禁止: 3', ()=>v[3])
+        a.e(RangeError, `指定された添字は配列の長さを超過しています: idx:3, len:3`, ()=>v[3])
         a.e(TypeError, '未定義プロパティへの代入禁止: x', ()=>v.x=1)
         a.e(TypeError, '未定義プロパティへの参照禁止: x', ()=>v.x)
         a.e(hook.errors.fix, 'Assignment to fix variable.', ()=>v.push(7))
@@ -1366,9 +1371,10 @@ window.addEventListener('load', async(e)=>{
     a.t(()=>{
         let count = 0;
         const l = valk.typed([2,4,6], `int`, {onChanged:()=>++count})
-        l.push(7) // pushするとconstructorが働きoptionsが消失する(大元のArray.constructorにはoptionsがないから)
+        l.push(7)
         console.log(count)
         console.log(l)
+        console.log(1===count, 4===l.length, 2===l[0], 4===l[1], 6===l[2], 7===l[3])
         return 1===count && 4===l.length && 2===l[0] && 4===l[1] && 6===l[2] && 7===l[3]
     })
 
