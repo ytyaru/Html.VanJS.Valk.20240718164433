@@ -144,7 +144,6 @@ class Counter {
         this._isAsc = this._start < this._end
         this._onCompletedType = Enum.types.CounterCompleted.Clear;
         if (end < start) { this._options.onStep = (v,tick,op)=>--v; }
-        //console.log(options, options.type)
         for (let key of 'onStep,onComplete'.split(',')) {
             if (Type.isFn(options[key])) { this._options[key] = options[key] }
         }
@@ -291,15 +290,12 @@ class TypedVal extends hook.types.val {
             const typeNm = onValidate.capitalize()
             if (!(`is${typeNm}` in Type)) { throw new TypeError(`第二引数onValidateが文字列のときはTypeにあるis系メソッド名の型名であるべきです: ${typeNm}`) }
             if (!Type[`is${typeNm}`](v)) {throw new TypeError(`第一引数vの値が第二引数で指定した型と一致しません: ${v}, ${typeNm}`)}
-            //onValidate = (target, name, args, o)=>Type[`is${typeNm}`](args)
             onValidate = (i,v,o)=>{
                 if (Type[`is${typeNm}`](i)) { return true }
                 else {throw new TypeError(`代入値が指定された型と一致しません: ${i}, ${typeNm}`)}
             }
         }
         if (Type.isFn(onValidate)) { options = {onValidate:onValidate, ...options} }
-        //if (Type.isFn(onValidate)) { options = {onValidate:onValidate, onSetDefault:()=>{throw new TypeError(``)}, ...options} }
-
         super(v, options, insOpts)
     }
 }
@@ -334,9 +330,7 @@ class TypedAry extends hook.types.HookableContainer(Array) {
             }
             opts.onInvalid = (target, key, value, n, o)=>{throw new TypeError(`引数の型が指定された型と一致しません: ${typeNm}`)}
         }
-        //if (Type.isFn(onValidate)) { opts = {onValidate:onValidate, ...opts} }
         if (Type.isFn(onValidate)) { opts = {onValidate:onValidate, ...opts} }
-
         super(v, opts, insOpts, TypedAry.HookableMethodNames, TypedAry.NotHookableMethodNames)
     }
 }
@@ -364,7 +358,6 @@ class TypedSet extends hook.types.HookableContainer(Set) {
 }
 class TypedMap extends hook.types.HookableContainer(Map) { 
     static of(v, onValidate, opts={}, insOpts={}) { return new TypedSet(v, onValidate, opts, insOpts) }
-    //static isInitValue(v) { return (Type.isAry(v) && v.every(t=>Type.isAry(t) && 3===t.length && Type.isStr(t[0]))) }
     static isInitValue(v) { return (Type.isAry(v) && v.every(t=>Type.isAry(t) && 3===t.length && Type.isStr(t[0]) && Type.isStr(t[1]) && `is${t[1].capitalize()}` in Type)) } // v:[[key, typeName, value], ...]
     constructor(v, onValidate, opts={}, insOpts={}) { // v:[[key, typeName, value], ...]
         console.log([...v], onValidate)
@@ -386,8 +379,6 @@ class TypedMap extends hook.types.HookableContainer(Map) {
         super(v, opts, insOpts, 'clear,delete,set,entries,forEach,get,has,keys,values'.split(','))
     }
 }
-
-
 window.valk = Object.deepFreeze({
     fix:(v, options={}, insOpts={})=>ifel(v instanceof Array, ()=>FixAry.of(v,options,insOpts),
             v instanceof Set, ()=>FixSet.of(v,options,insOpts),
