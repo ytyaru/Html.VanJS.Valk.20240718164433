@@ -265,7 +265,6 @@ class SomeChanged {
         if (this._cands.has(v)) {
             const o = this._v
             this._v = v
-            //if (o!==this._v) { this._options.onChanged(v, o) }
             if (o!==this._v) { this._options.value.onChanged(v, o) }
         }
         else { throw new SomeError() }
@@ -285,19 +284,35 @@ class SomeChanged {
         return undefined
     }
 }
+class TypedVal extends hook.types.val {
+    static of(v, onValidate, opts={}, insOpts={}) { return new TypedVal(v, onValidate, opts, insOpts) }
+    constructor(v, onValidate, options={}, insOpts={}) {
+        if (Type.isStr(onValidate)) {
+            const typeNm = onValidate.capitalize()
+            if (!(`is${typeNm}` in Type)) { throw new TypeError(`第二引数onValidateが文字列のときはTypeにあるis系メソッド名の型名であるべきです: ${typeNm}`) }
+            if (!Type[`is${typeNm}`](v)) {throw new TypeError(`第一引数vの値が第二引数で指定した型と一致しません: ${v}, ${typeNm}`)}
+            //onValidate = (target, name, args, o)=>Type[`is${typeNm}`](args)
+            onValidate = (i,v,o)=>{
+                if (Type[`is${typeNm}`](i)) { return true }
+                else {throw new TypeError(`代入値が指定された型と一致しません: ${i}, ${typeNm}`)}
+            }
+        }
+        if (Type.isFn(onValidate)) { options = {onValidate:onValidate, ...options} }
+        //if (Type.isFn(onValidate)) { options = {onValidate:onValidate, onSetDefault:()=>{throw new TypeError(``)}, ...options} }
+
+        super(v, options, insOpts)
+    }
+}
 class TypedAry extends hook.types.HookableContainer(Array) { 
     static HookableMethodNames = 'concat,fill,push,splice,toSpliced'.split(',')
     static NotHookableMethodNames = 'copyWithin,pop,reverse,shift,sort,unshift,at,entries,every,filter,find,findIndex,findLast,findLastIndex,flat,flatMap,forEach,includes,indexOf,join,keys,lastIndexOf,map,reduce,reduceRight,slice,some,toLocaleString,toReversed,toSorted,toString,values,with'.split(',')
-    //static of(v, onValidate, opts={}, insOpts={}) { return new TypedAry(v, onValidate, opts={}, insOpts={}) }
     static of(v, onValidate, opts={}, insOpts={}) { return new TypedAry(v, onValidate, opts, insOpts) }
     constructor(v, onValidate, opts={}, insOpts={}) {
-        //console.log(v, onValidate)
-        //super(v, opts, insOpts, TypedAry.HookableMethodNames, TypedAry.NotHookableMethodNames)
-        if (Type.isStr(onValidate) && `is${onValidate.capitalize()}` in Type) {
+        if (Type.isStr(onValidate)) {
             const typeNm = onValidate.capitalize()
-            //this._options.onValidate = (target, name, args, o)=>{
+            if (!(`is${typeNm}` in Type)) { throw new TypeError(`第二引数onValidateが文字列のときはTypeにあるis系メソッド名の型名であるべきです: ${typeNm}`) }
+            if (!v.every(x=>Type[`is${typeNm}`](x))) {throw new TypeError(`第一引数vのうち一つ以上の値が第二引数で指定した型と一致しません: ${v}, ${typeNm}`)}
             onValidate = (target, name, args, o)=>{
-                //console.log('onValidate:', name, args)
                 if (Type.isAry(args)) { args.every(v=>Type[`is${typeNm}`](v)) }
                 else { return Type[`is${typeNm}`](args) }
                 if ('concat'===name) {
@@ -315,174 +330,64 @@ class TypedAry extends hook.types.HookableContainer(Array) {
                 else if ('push'===name) { return args.every(v=>Type[`is${typeNm}`](v)) }
                 else if ('splice'===name) {return Type.isAry(args[2]) ? args[2].every(v=>Type[`is${typeNm}`](v)) : Type[`is${typeNm}`](args[2])}
                 else if ('toSpliced'===name) {return args[2].every(v=>Type[`is${typeNm}`](v))}
-                return false
+                return true
             }
+            opts.onInvalid = (target, key, value, n, o)=>{throw new TypeError(`引数の型が指定された型と一致しません: ${typeNm}`)}
         }
-//        console.log(onValidate)
-//        console.log(onValidate, this._options.onValidate)
-        //if (!Type.isFn(this._options.onValidate)) { throw new TypeError(`onValidateは真偽値を返す関数かTypeに含まれるis系メソッド名であるべきです。`) }
-//        if (!Type.isFn(onValidate)) { throw new TypeError(`onValidateは真偽値を返す関数かTypeに含まれるis系メソッド名であるべきです。`) }
+        //if (Type.isFn(onValidate)) { opts = {onValidate:onValidate, ...opts} }
         if (Type.isFn(onValidate)) { opts = {onValidate:onValidate, ...opts} }
-//        opts = Type.isFn(onValidate) ? {onValidate:onValidate, ...opts} : opts
-//        this._defineTypedMethods()
-//        this._defineNotTypedMethods()
-//        return hook.ins(this, insOpts)
-        //super(v, opts, insOpts, TypedAry.HookableMethodNames, TypedAry.NotHookableMethodNames)
-        //super(v, opts, {onValidate:onValidate, ...insOpts}, TypedAry.HookableMethodNames, TypedAry.NotHookableMethodNames)
-        //super(v, {onValidate:onValidate, ...opts}, insOpts, TypedAry.HookableMethodNames, TypedAry.NotHookableMethodNames)
-        //console.log(opts)
+
         super(v, opts, insOpts, TypedAry.HookableMethodNames, TypedAry.NotHookableMethodNames)
     }
 }
-
-/*
-class TypedAry extends Array {
-    static of(v, onValidate, opts={}, insOpts={}) { return new TypedAry(v, onValidate, opts, insOpts) }
-    constructor(v, onValidate, opts={}, insOpts={}) {
-        super(v)
-        this._options = {...{
-            onBefore: ()=>{},
-            onValidate: (i)=>true,
-//            onSet: (i,o)=>i,
-//            onSetDefault: (i,o)=>o,
-            onValid: (i,v,o)=>{},
-            onInvalid: (i,v,o)=>{throw new ValidError(`Invalid value.`)},
-            onChanged: (i,v,o)=>{},
-            onUnchanged: (i,v,o)=>{},
-            onAfter: ()=>{},
-        }, ...opts}
-        if (Type.isStr(onValidate) && `is${onValidate.capitalize()}` in Type) {
-            const typeNm = onValidate.capitalize()
-            this._options.onValidate = (target, name, args, o)=>{
-                console.log('onValidate:', name, args)
-                if (Type.isAry(args)) { args.every(v=>Type[`is${typeNm}`](v)) }
-                else { return Type[`is${typeNm}`](args) }
-                if ('concat'===name) {
-                    if (Type.isAry(args)) {
-                        for (let arg of args) {
-                            if (Type.isAry(arg)) {
-                                const r = arg.every(v=>Type[`is${typeNm}`](arg))
-                                if (!r) { return false }
-                            } else { if(!Type[`is${typeNm}`](arg)) { return false } }
-                        }
-                        return true
-                    } else { return Type[`is${typeNm}`](args) }
-                }
-                else if ('fill'===name) {return Type[`is${typeNm}`](args[0])}
-                else if ('push'===name) { return args.every(v=>Type[`is${typeNm}`](v)) }
-                else if ('splice'===name) {console.log(args);return Type.isAry(args[2]) ? args[2].every(v=>Type[`is${typeNm}`](v)) : Type[`is${typeNm}`](args[2])}
-                else if ('toSpliced'===name) {return args[2].every(v=>Type[`is${typeNm}`](v))}
-                return false
-            }
-        }
-        console.log(onValidate, this._options.onValidate)
-        if (!Type.isFn(this._options.onValidate)) { throw new TypeError(`onValidateは真偽値を返す関数かTypeに含まれるis系メソッド名であるべきです。`) }
-        this._defineTypedMethods()
-        this._defineNotTypedMethods()
-        return hook.ins(this, insOpts)
-    }
-    _defineTypedMethods() {
-        for (let name of 'concat,fill,push,splice,toSpliced'.split(',')) {
-            Object.defineProperty(this, name, {
-                value:(...args)=>{
-                    this._options.onBefore()
-                    const o = Type.toStr(this) // ディープコピー（全文字列化）
-                    let r;
-                    ifel(this._options.onValidate(this, name, args, o), 
-                        ()=>{ r = super[name](...args);
-                            this._options.onValid(this, name, args, o); },
-                        ()=>this._options.onInvalid(this, name, args, o))
-                    const n = Type.toStr(this) // ディープコピー（全文字列化）
-                    this._options[o===n ? 'onUnchanged' : 'onChanged'](this, name, args, o)
-                    this._options.onAfter()
-                    return r
-                },
-            })
-        }
-    }
-    _defineNotTypedMethods() {
-        for (let name of 'copyWithin,pop,reverse,shift,sort,unshift,at,entries,every,filter,find,findIndex,findLast,findLastIndex,flat,flatMap,forEach,includes,indexOf,join,keys,lastIndexOf,map,reduce,reduceRight,slice,some,toLocaleString,toReversed,toSorted,toString,values,with'.split(',')) {
-            Object.defineProperty(this, name, {
-                value:(...args)=>super[name](...args),
-            })
-        }
-    }
-}
-*/
-/*
-class TypedSet extends Set {
+class TypedSet extends hook.types.HookableContainer(Set) { 
     static of(v, onValidate, opts={}, insOpts={}) { return new TypedSet(v, onValidate, opts, insOpts) }
-    constructor(v, onValidate, opts={}, insOpts={}) {
-        super(v)
-        this._options = {...{
-            onBefore: ()=>{},
-            onValidate: (i)=>true,
-//            onSet: (i,o)=>i,
-//            onSetDefault: (i,o)=>o,
-            onValid: (i,v,o)=>{},
-            onInvalid: (i,v,o)=>{throw new ValidError(`Invalid value.`)},
-            onChanged: (i,v,o)=>{},
-            onUnchanged: (i,v,o)=>{},
-            onAfter: ()=>{},
-        }, ...opts}
-        if (Type.isStr(onValidate) && `is${onValidate.capitalize()}` in Type) {
+    constructor(v, onValidate, opts={}, insOpts={}) { // v:Set
+        console.log([...v], onValidate)
+        if (!Type.isIns(v, Set)) { throw new TypeError(`第一引数vはSet型であるべきです: ${v}, ${typeof v}, ${Type.getName(v)}`) }
+        if (Type.isStr(onValidate)) {
             const typeNm = onValidate.capitalize()
-            this._options.onValidate = (target, name, args, o)=>{
-                console.log('onValidate:', name, args)
+            if (!(`is${typeNm}` in Type)) { throw new TypeError(`第二引数onValidateが文字列のときはTypeにあるis系メソッド名の型名であるべきです: ${typeNm}`) }
+            console.log([...v])
+            if (![...v].every(x=>Type[`is${typeNm}`](x))) {throw new TypeError(`第一引数vのうち一つ以上の値が第二引数で指定した型と一致しません: ${[...v]}, ${typeNm}`)}
+            onValidate = (target, name, args, o)=>{
                 if (Type.isAry(args)) { args.every(v=>Type[`is${typeNm}`](v)) }
                 else { return Type[`is${typeNm}`](args) }
-                if ('concat'===name) {
-                    if (Type.isAry(args)) {
-                        for (let arg of args) {
-                            if (Type.isAry(arg)) {
-                                const r = arg.every(v=>Type[`is${typeNm}`](arg))
-                                if (!r) { return false }
-                            } else { if(!Type[`is${typeNm}`](arg)) { return false } }
-                        }
-                        return true
-                    } else { return Type[`is${typeNm}`](args) }
-                }
-                else if ('fill'===name) {return Type[`is${typeNm}`](args[0])}
-                else if ('push'===name) { return args.every(v=>Type[`is${typeNm}`](v)) }
-                else if ('splice'===name) {console.log(args);return Type.isAry(args[2]) ? args[2].every(v=>Type[`is${typeNm}`](v)) : Type[`is${typeNm}`](args[2])}
-                else if ('toSpliced'===name) {return args[2].every(v=>Type[`is${typeNm}`](v))}
-                return false
+                if ('add'===name) { return Type[`is${typeNm}`](...args) }
+                return true
             }
+            opts.onInvalid = (target, key, value, n, o)=>{throw new TypeError(`引数の型が指定された型と一致しません: ${typeNm}`)}
         }
-        console.log(onValidate, this._options.onValidate)
-        if (!Type.isFn(this._options.onValidate)) { throw new TypeError(`onValidateは真偽値を返す関数かTypeに含まれるis系メソッド名であるべきです。`) }
-        this._defineTypedMethods()
-        this._defineNotTypedMethods()
-        return hook.ins(this, insOpts)
-    }
-    _defineTypedMethods() {
-        for (let name of 'concat,fill,push,splice,toSpliced'.split(',')) {
-            Object.defineProperty(this, name, {
-                value:(...args)=>{
-                    this._options.onBefore()
-                    const o = Type.toStr(this) // ディープコピー（全文字列化）
-                    let r;
-                    ifel(this._options.onValidate(this, name, args, o), 
-                        ()=>{ r = super[name](...args);
-                            this._options.onValid(this, name, args, o); },
-                        ()=>this._options.onInvalid(this, name, args, o))
-                    const n = Type.toStr(this) // ディープコピー（全文字列化）
-                    this._options[o===n ? 'onUnchanged' : 'onChanged'](this, name, args, o)
-                    this._options.onAfter()
-                    return r
-                },
-            })
-        }
-    }
-    _defineNotTypedMethods() {
-        for (let name of 'copyWithin,pop,reverse,shift,sort,unshift,at,entries,every,filter,find,findIndex,findLast,findLastIndex,flat,flatMap,forEach,includes,indexOf,join,keys,lastIndexOf,map,reduce,reduceRight,slice,some,toLocaleString,toReversed,toSorted,toString,values,with'.split(',')) {
-            Object.defineProperty(this, name, {
-                value:(...args)=>super[name](...args),
-            })
-        }
+        if (Type.isFn(onValidate)) { opts = {onValidate:onValidate, ...opts} }
+        super(v, opts, insOpts, 'add,clear,delete,difference,entries,forEach,has,intersection,isDisjointFrom,isSubsetOf,isSupersetOf,keys,symmetricDifference,union,values'.split(','))
     }
 }
-*/
+class TypedMap extends hook.types.HookableContainer(Map) { 
+    static of(v, onValidate, opts={}, insOpts={}) { return new TypedSet(v, onValidate, opts, insOpts) }
+    //static isInitValue(v) { return (Type.isAry(v) && v.every(t=>Type.isAry(t) && 3===t.length && Type.isStr(t[0]))) }
+    static isInitValue(v) { return (Type.isAry(v) && v.every(t=>Type.isAry(t) && 3===t.length && Type.isStr(t[0]) && Type.isStr(t[1]) && `is${t[1].capitalize()}` in Type)) } // v:[[key, typeName, value], ...]
+    constructor(v, onValidate, opts={}, insOpts={}) { // v:[[key, typeName, value], ...]
+        console.log([...v], onValidate)
+        if (!Type.isIns(v, Set)) { throw new TypeError(`第一引数vはSet型であるべきです: ${v}, ${typeof v}, ${Type.getName(v)}`) }
+        if (Type.isStr(onValidate)) {
+            const typeNm = onValidate.capitalize()
+            if (!(`is${typeNm}` in Type)) { throw new TypeError(`第二引数onValidateが文字列のときはTypeにあるis系メソッド名の型名であるべきです: ${typeNm}`) }
+            console.log([...v])
+            if (![...v].every(x=>Type[`is${typeNm}`](x))) {throw new TypeError(`第一引数vのうち一つ以上の値が第二引数で指定した型と一致しません: ${[...v]}, ${typeNm}`)}
+            onValidate = (target, name, args, o)=>{
+                if (Type.isAry(args)) { args.every(v=>Type[`is${typeNm}`](v)) }
+                else { return Type[`is${typeNm}`](args) }
+                if ('add'===name) { return Type[`is${typeNm}`](...args) }
+                return true
+            }
+            opts.onInvalid = (target, key, value, n, o)=>{throw new TypeError(`引数の型が指定された型と一致しません: ${typeNm}`)}
+        }
+        if (Type.isFn(onValidate)) { opts = {onValidate:onValidate, ...opts} }
+        super(v, opts, insOpts, 'clear,delete,set,entries,forEach,get,has,keys,values'.split(','))
+    }
+}
+
+
 window.valk = Object.deepFreeze({
     fix:(v, options={}, insOpts={})=>ifel(v instanceof Array, ()=>FixAry.of(v,options,insOpts),
             v instanceof Set, ()=>FixSet.of(v,options,insOpts),
@@ -495,7 +400,12 @@ window.valk = Object.deepFreeze({
     range:(...args)=>Range.of(...args),
     some:(...args)=>Some.of(...args),
     someChanged:(...args)=>SomeChanged.of(...args),
-    typed:(...args)=>TypedAry.of(...args),
+    //typed:(...args)=>TypedAry.of(...args),
+    typed:(...args)=>ifel(
+        TypedMap.isInitValue(args[0]), ()=>TypedMap.of(...args),
+        Type.isAry(args[0]), ()=>TypedAry.of(...args), 
+        Type.isIns(args[0], Set), ()=>TypedSet.of(...args),
+        ()=>TypedVal.of(...args)),
     valid:(...args)=>null,
     changed:(...args)=>null,
     enums: Enum.types,

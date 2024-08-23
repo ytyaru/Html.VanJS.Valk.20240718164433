@@ -1,0 +1,115 @@
+<script>
+class HookAry {
+    static of(...args) { return new HookAry(...args) }
+    constructor(ary, options={}, insOpts={}, hookableMethodNames=[], notHookableMethodNames=[]) {
+        if (!Type.isAry(ary)) { throw new TypeError(`引数aryは配列であるべきです。`) }
+        if (!Type.isStrs(hookableMethodNames)) {throw new TypeError(`引数hookableMethodNamesは文字列の配列であるべきです。`)}
+        if (!Type.isStrs(notHookableMethodNames)) {throw new TypeError(`引数notHookableMethodNamesは文字列の配列であるべきです。`)}
+        this._v = ary
+        this._hookableMethodNames = hookableMethodNames
+        this._notHookableMethodNames = notHookableMethodNames
+        this._options = {...{
+            onBefore: (target, key, value)=>{},
+            onValidate: (target, key, value)=>true,
+            onSet: (target, key, value, o)=>{
+                if (Type.hasSetter(target, key)) { return Reflect.set(target, key, value) }
+                else { return (target[key] = value); }
+            },
+            onSetDefault: (target, key, value, o)=>{},
+            onValid: (target, key, value, n, o)=>{},
+            onInvalid: (target, key, value, n, o)=>{throw new ValidError(`Invalid value.`)},
+            onChanged: (target, key, value, n, o)=>{},
+            onUnchanged: (target, key, value, n, o)=>{},
+            onAfter: (target, key, value, n, o)=>{},
+        }, ...options}
+        this._insOpts = {...InsProxy.defaultPermission(), ...insOpts}
+        if (insOpts.setUndefined) {target.onSetUndefined = (target, key, value, receiver)=>this.set(target, key, value, receiver)}
+        this[Symbol.iterator] = ()=>this._v[Symbol.iterator]()
+        this._defineMethods()
+        return InsProxy.of(this, {
+            onGetDefined:(target, key, receiver)=>this.get(target, key),
+            onGetUndefined:(target, key, receiver)=>this.get(target, key),
+            onSetDefined: (target, key, value, receiver)=>this.set(target, key, value, receiver),
+            onSetUndefined:(target, key, value, receiver)=>this.set(target, key, value, receiver),
+            ...insOpts,
+        })
+    }
+    #isNumeric(s) { return /^-?\d*\.?\d+$/.test(s) }
+    next() { return this._v.next() }
+    get length() { return this._v.length }
+    toString() { return this._v.toString() }
+    get(target, key, receiver) {
+        console.log('get:', key)
+        // 破壊的メソッドの取得（呼出）禁止
+        if (!this._insOpts.getDestroyMethod && destroyMethods.Array.some(n=>n===key)) {throw new FixError()} 
+        // this._v[添字]
+        else if (Type.isStr(key) && this.#isNumeric(key)) {
+            if (0===this.length) {throw new ReferenceError(`配列の長さが0のため指定された添字の値を参照できません: ${key}`)}
+            const num = parseInt(key)
+            const idx = (num < 0) ? this.length - (Math.abs(num) % this.length) : num
+            if (this.length <= idx) {throw new RangeError(`指定された添字は配列の長さを超過しています: idx:${key}, len:${this.length}`)}
+            //if (!this._insOpts.getDefined) {throw new TypeError(`定義済プロパティへの参照禁止: ${key}`)}
+            return this._v[idx]
+        }
+        // HookAry instance method
+        if (key in target) {
+            if (Type.hasGetter(target, key)) { return Reflect.get(target, key) } // getter
+            else if (Type.isFn(target[key])) { return target[key].bind(target) } // method, constructor?
+            else if (key === Symbol.iterator) { return target[Symbol.iterator].bind(target) } // for of
+            return target[key] // field
+        } else {throw new TypeError(`未定義プロパティへの参照禁止: ${key}`)}
+    }
+    set(target, key, value, receiver) {
+       if (Type.isStr(key) && this.#isNumeric(key)) {
+            if (0===this.length) {throw new ReferenceError(`配列の長さが0のため指定された添字の値を参照できません: ${key}`)}
+            const num = parseInt(key)
+            const idx = (num < 0) ? this.length - (Math.abs(num) % this.length) : num
+            if (this.length <= idx) {throw new RangeError(`指定された添字は配列の長さを超過しています: idx:${key}, len:${this.length}`)}
+            if (!this._insOpts.setDefined) {throw new TypeError(`定義済プロパティへの代入禁止: ${key}`)}
+            return this._v[idx]
+        }
+        if (key in target) {if (!this._insOpts.setDefined) {throw new TypeError(`定義済プロパティへの代入禁止: ${key}`)}}
+        else {if (!this._insOpts.setUndefined) {throw new TypeError(`未定義プロパティへの代入禁止: ${key}`)}}
+        this._options.onBefore(target, key, value)
+        const o = this.get(target, key)
+        let r;
+        const [onSet, onValid] = ifel(this._options.onValidate(target, key, value, o),
+            ()=>['onSet', 'onValid'],
+            ()=>['onSetDefault', 'onInvalid'],
+        )
+        r = this._options[onSet](target, key, value, o)
+        const n = this.get(target, key)
+        this._options[onValid](target, key, value, n, o)
+        this._options[o.eq(n) ? 'onUnchanged' : 'onChanged'](target, key, value, n, o)
+        this._options.onAfter(target, key, value, n, o)
+        return true
+    }
+    _defineMethods() {
+        Array.prototype.eq = function(b) { return Array.isArray(b) && this.length === b.length && this.every((v,i) =>v===b[i]); }
+        const names = (Type.isAry(this._hookableMethodNames) && 0<this._hookableMethodNames.length) ? this._hookableMethodNames : destroyMethods.Array.concat(notDestroyMethods.Array);
+        for (let name of names) {
+            Object.defineProperty(this, name, {
+                value:(...args)=>{
+                    console.log('HookAry:', name, args)
+                    this._options.onBefore()
+                    const o = [...this._v] // シャローコピー
+                    let r;
+                    ifel(this._options.onValidate(this, name, args, o), 
+                        ()=>{ r = this._v[name](...args);
+                            this._options.onValid(this, name, args, o); },
+                        ()=>this._options.onInvalid(this, name, args, o))
+                    const n = [...this._v] // シャローコピー
+                    this._options[o.eq(n) ? 'onUnchanged' : 'onChanged'](this, name, args, n, o)
+                    this._options.onAfter(this, name, args, n, o)
+                    return r
+                },
+                configurable:true,
+                enumerable:true,
+                writable:true,
+            })
+        }
+    }
+}
+class TypedAry0 extends HookAry {constructor(v, onValidate, opts={}, insOpts={}) {super()}}
+console.log(HookAry)
+</script>

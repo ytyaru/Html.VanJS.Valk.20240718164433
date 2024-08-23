@@ -215,7 +215,6 @@ class HookAry {
             const num = parseInt(key)
             const idx = (num < 0) ? this.length - (Math.abs(num) % this.length) : num
             if (this.length <= idx) {throw new RangeError(`指定された添字は配列の長さを超過しています: idx:${key}, len:${this.length}`)}
-            //if (!this._insOpts.getDefined) {throw new TypeError(`定義済プロパティへの参照禁止: ${key}`)}
             return this._v[idx]
         }
         // HookAry instance method
@@ -259,14 +258,16 @@ class HookAry {
                 value:(...args)=>{
                     console.log('HookAry:', name, args)
                     this._options.onBefore()
+//                    const o = Type.toStr(this) // ディープコピー（全文字列化）
                     const o = [...this._v] // シャローコピー
                     let r;
                     ifel(this._options.onValidate(this, name, args, o), 
+                        //()=>{ r = super[name](...args);
                         ()=>{ r = this._v[name](...args);
                             this._options.onValid(this, name, args, o); },
                         ()=>this._options.onInvalid(this, name, args, o))
+                    //const n = Type.toStr(this) // ディープコピー（全文字列化）
                     const n = [...this._v] // シャローコピー
-                    console.log(o.eq(n), o, n, o.eq(n) ? 'onUnchanged' : 'onChanged', this._options[o.eq(n) ? 'onUnchanged' : 'onChanged'])
                     this._options[o.eq(n) ? 'onUnchanged' : 'onChanged'](this, name, args, n, o)
                     this._options.onAfter(this, name, args, n, o)
                     return r
@@ -278,7 +279,6 @@ class HookAry {
         }
     }
 }
-//class TypedAry0 extends HookAry {constructor(v, onValidate, opts={}, insOpts={}) {super()}}
 const HookableContainer = superClass => class extends superClass {
     constructor(v, options={}, insOpts={}, hookableMethodNames=[], notHookableMethodNames=[]) {
         if (Set===superClass) { super(v) }
@@ -299,7 +299,6 @@ const HookableContainer = superClass => class extends superClass {
             onUnchanged: (i,v,o)=>{},
             onAfter: ()=>{},
         }, ...options}
-        //console.log('onValidate:', this._options.onValidate, options)
         this._hookableMethodNames = hookableMethodNames
         this._notHookableMethodNames = notHookableMethodNames
         this._defineDestoryMethods()
@@ -308,12 +307,9 @@ const HookableContainer = superClass => class extends superClass {
     }
     _defineDestoryMethods() {
         const names = (Type.isAry(this._hookableMethodNames) && 0<this._hookableMethodNames.length) ? this._hookableMethodNames : (Object===superClass ? Object.keys(this) : destroyMethods[superClass.name]);
-        //const names = Object===superClass ? Object.keys(this) : destroyMethods[superClass.name]
-//        console.log('names:', names)
         for (let name of names) {
             Object.defineProperty(this, name, {
                 value:(...args)=>{
-                    //console.log('HookableContainer:', name, args)
                     this._options.onBefore()
                     const o = Type.toStr(this) // ディープコピー（全文字列化）
                     let r;
@@ -334,8 +330,6 @@ const HookableContainer = superClass => class extends superClass {
     }
     _defineNotDestoryMethods() {
         const names = (Type.isAry(this._notHookableMethodNames) && 0<this._notHookableMethodNames.length) ? this._notHookableMethodNames: (Object===superClass ? Object.keys(this) : notDestroyMethods[superClass.name])
-        //const names = Object===superClass ? Object.keys(this) : notDestroyMethods[superClass.name]
-        //console.log('names:', names)
         for (let name of names) {
             Object.defineProperty(this, name, {
                 value:(...args)=>super[name](...args),
@@ -369,7 +363,6 @@ window.hook = Object.deepFreeze({
     set: (v, options={}, insOpts={})=>new HookSet(v, options, insOpts),
     map: (v, options={}, insOpts={})=>new HookMap(v, options, insOpts),
     types: types,
-    //types: Object.assign(...[HookVal, HookObj, HookAry, HookSet, HookMap].map(cls=>[cls.name.replace('Hook','').toLowerCase(), Object.freeze(cls)]).map(([k,v])=>({[k]:v}))),
     errors: {
         fix: FixError,
         valid: ValidError,

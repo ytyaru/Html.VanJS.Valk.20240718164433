@@ -285,17 +285,18 @@ class SomeChanged {
         return undefined
     }
 }
-class TypedAry extends hook.types.HookAry {
+class TypedAry extends hook.types.ary {
 //    static HookableMethodNames = 'concat,fill,push,splice,toSpliced'.split(',')
 //    static NotHookableMethodNames = 'copyWithin,pop,reverse,shift,sort,unshift,at,entries,every,filter,find,findIndex,findLast,findLastIndex,flat,flatMap,forEach,includes,indexOf,join,keys,lastIndexOf,map,reduce,reduceRight,slice,some,toLocaleString,toReversed,toSorted,toString,values,with'.split(',')
-    static of(v, onValidate, opts={}, insOpts={}) { return new TypedAry(v, onValidate, opts={}, insOpts={}) }
+    static of(v, onValidate, opts={}, insOpts={}) { return new TypedAry(v, onValidate, opts, insOpts) }
     constructor(v, onValidate, opts={}, insOpts={}) {
+        console.log(v, onValidate, opts, insOpts)
         if (Type.isStr(onValidate) && `is${onValidate.capitalize()}` in Type) {
             const typeNm = onValidate.capitalize()
             onValidate = (target, name, args, o)=>{
                 //console.log('onValidate:', name, args)
-                if (Type.isAry(args)) { args.every(v=>Type[`is${typeNm}`](v)) }
-                else { return Type[`is${typeNm}`](args) }
+//                if (Type.isAry(args)) { args.every(v=>Type[`is${typeNm}`](v)) }
+//                else { return Type[`is${typeNm}`](args) }
                 if ('concat'===name) {
                     if (Type.isAry(args)) {
                         for (let arg of args) {
@@ -314,7 +315,9 @@ class TypedAry extends hook.types.HookAry {
                 return false
             }
         }
+        console.log(opts)
         if (Type.isFn(onValidate)) { opts = {onValidate:onValidate, ...opts} }
+        console.log(opts)
         //super(v, opts, insOpts, TypedAry.HookableMethodNames, TypedAry.NotHookableMethodNames)
         super(v, opts, insOpts)
     }
