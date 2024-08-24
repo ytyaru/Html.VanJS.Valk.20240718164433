@@ -9,6 +9,8 @@
 window.addEventListener('load', async(e)=>{
     const a = new Assertion();
     const bb = new BlackBox();
+    console.log(Type.isAry([]))
+    console.log(Type.isIns([], Set))
     // InsProxy
     ;(function(){
         class C {
@@ -1431,10 +1433,48 @@ window.addEventListener('load', async(e)=>{
     })
 
     // valk.typed Map
+    a.t(()=>valk.types.TypedMap.isInitValue([['name','str','Yamada'],['age','int',0]]))
+    a.f(()=>valk.types.TypedMap.isInitValue([['name','str','Yamada'],['age','int']])) // ageの値がない
+    a.f(()=>valk.types.TypedMap.isInitValue([['name','str','Yamada'],['age','X',0]])) // ageの型名が不正
+    a.e(TypeError, `第一引数vは[[key,typeName,value],...]であるべきです。`, ()=>new valk.types.TypedMap([['name','str','Yamada'],['age','int']]))
     a.t(()=>{
-        const s = valk.typed(new Map([['name','str','Yamada'],['age','int',0]]))
-        return s instanceof Set && 3===s.size && s.has(2) && s.has(4) && s.has(6)
+        const m = valk.typed([['name','str','Yamada'],['age','int',0]])
+        return m instanceof valk.types.TypedMap && m instanceof Map && 2===m.size && 'Yamada'===m.get('name') && 0===m.get('age')
     })
+    a.t(()=>{
+        const m = new valk.types.TypedMap([['name','str','Yamada'],['age','int',0]])
+        return m instanceof valk.types.TypedMap && m instanceof Map && 2===m.size && 'Yamada'===m.get('name') && 0===m.get('age')
+    })
+    a.e(TypeError, `初期値の値が指定した型と一致しません: age:X actual:String, expected:Int`, ()=>new valk.types.TypedMap([['name','str','Yamada'],['age','int','X']]))
+    a.e(TypeError, `引数の型が指定された型と一致しません: actual:String expected:Int`, ()=>{
+        const m = new valk.types.TypedMap([['name','str','Yamada'],['age','int',0]])
+        m.set('age', 'X')
+    })
+    a.t(()=>{
+        const m = new valk.types.TypedMap([['name','str','Yamada'],['age','int',0]])
+        m.set('age', 1)
+        return m instanceof valk.types.TypedMap && m instanceof Map && 2===m.size && 'Yamada'===m.get('name') && 1===m.get('age')
+    })
+    a.t(()=>{
+        const m = new valk.types.TypedMap([['name','str','Yamada'],['age','int',0]])
+        m.add('weight', 'float', 60.5)
+        return m instanceof valk.types.TypedMap && m instanceof Map && 3===m.size && 'Yamada'===m.get('name') && 0===m.get('age') && 60.5===m.get('weight')
+    })
+    a.t(()=>{
+        const m = new valk.types.TypedMap([['name','str','Yamada'],['age','int',0]])
+        m.add('weight', 'float', 60.5)
+        m.set('weight', 62.3)
+        return m instanceof valk.types.TypedMap && m instanceof Map && 3===m.size && 'Yamada'===m.get('name') && 0===m.get('age') && 62.3===m.get('weight')
+    })
+    a.e(TypeError, `引数の型が指定された型と一致しません: actual:String expected:Float`, ()=>{
+        const m = new valk.types.TypedMap([['name','str','Yamada'],['age','int',0]])
+        m.add('weight', 'float', 60.5)
+        m.set('weight', 'X')
+    })
+
+
+
+
 
 
 

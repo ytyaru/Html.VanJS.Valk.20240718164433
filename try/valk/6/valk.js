@@ -337,7 +337,7 @@ class TypedAry extends hook.types.HookableContainer(Array) {
 class TypedSet extends hook.types.HookableContainer(Set) { 
     static of(v, onValidate, opts={}, insOpts={}) { return new TypedSet(v, onValidate, opts, insOpts) }
     constructor(v, onValidate, opts={}, insOpts={}) { // v:Set
-        console.log([...v], onValidate)
+        console.log(v, [...v], onValidate)
         if (!Type.isIns(v, Set)) { throw new TypeError(`第一引数vはSet型であるべきです: ${v}, ${typeof v}, ${Type.getName(v)}`) }
         if (Type.isStr(onValidate)) {
             const typeNm = onValidate.capitalize()
@@ -345,8 +345,8 @@ class TypedSet extends hook.types.HookableContainer(Set) {
             console.log([...v])
             if (![...v].every(x=>Type[`is${typeNm}`](x))) {throw new TypeError(`第一引数vのうち一つ以上の値が第二引数で指定した型と一致しません: ${[...v]}, ${typeNm}`)}
             onValidate = (target, name, args, o)=>{
-                if (Type.isAry(args)) { args.every(v=>Type[`is${typeNm}`](v)) }
-                else { return Type[`is${typeNm}`](args) }
+//                if (Type.isAry(args)) { args.every(v=>Type[`is${typeNm}`](v)) }
+//                else { return Type[`is${typeNm}`](args) }
                 if ('add'===name) { return Type[`is${typeNm}`](...args) }
                 return true
             }
@@ -357,26 +357,66 @@ class TypedSet extends hook.types.HookableContainer(Set) {
     }
 }
 class TypedMap extends hook.types.HookableContainer(Map) { 
-    static of(v, onValidate, opts={}, insOpts={}) { return new TypedSet(v, onValidate, opts, insOpts) }
-    static isInitValue(v) { return (Type.isAry(v) && v.every(t=>Type.isAry(t) && 3===t.length && Type.isStr(t[0]) && Type.isStr(t[1]) && `is${t[1].capitalize()}` in Type)) } // v:[[key, typeName, value], ...]
-    constructor(v, onValidate, opts={}, insOpts={}) { // v:[[key, typeName, value], ...]
-        console.log([...v], onValidate)
-        if (!Type.isIns(v, Set)) { throw new TypeError(`第一引数vはSet型であるべきです: ${v}, ${typeof v}, ${Type.getName(v)}`) }
-        if (Type.isStr(onValidate)) {
-            const typeNm = onValidate.capitalize()
-            if (!(`is${typeNm}` in Type)) { throw new TypeError(`第二引数onValidateが文字列のときはTypeにあるis系メソッド名の型名であるべきです: ${typeNm}`) }
-            console.log([...v])
-            if (![...v].every(x=>Type[`is${typeNm}`](x))) {throw new TypeError(`第一引数vのうち一つ以上の値が第二引数で指定した型と一致しません: ${[...v]}, ${typeNm}`)}
-            onValidate = (target, name, args, o)=>{
-                if (Type.isAry(args)) { args.every(v=>Type[`is${typeNm}`](v)) }
-                else { return Type[`is${typeNm}`](args) }
-                if ('add'===name) { return Type[`is${typeNm}`](...args) }
-                return true
-            }
-            opts.onInvalid = (target, key, value, n, o)=>{throw new TypeError(`引数の型が指定された型と一致しません: ${typeNm}`)}
+    //static of(v, onValidate, opts={}, insOpts={}) { return new TypedMap(v, onValidate, opts, insOpts) }
+    static of(v, opts={}, insOpts={}) { return new TypedMap(v, opts, insOpts) }
+    static isInitValue(v) { return (Type.isAry(v) && 0<v.length && v.every(t=>Type.isAry(t) && 3===t.length && Type.isStr(t[0]) && Type.isStr(t[1]) && `is${t[1].capitalize()}` in Type)) } // v:[[key, typeName, value], ...]
+    //constructor(v, onValidate, opts={}, insOpts={}) { // v:[[key, typeName, value], ...]
+    constructor(v, opts={}, insOpts={}) { // v:[[key, typeName, value], ...]
+        console.log(v, opts, insOpts)
+        if (!TypedMap.isInitValue(v)) {throw new TypeError(`第一引数vは[[key,typeName,value],...]であるべきです。`)}
+//        if (!Type.isIns(v, Map)) { throw new TypeError(`第一引数vはMap型であるべきです: ${v}, ${typeof v}, ${Type.getName(v)}`) }
+        const mv = []
+        for (let [nm, typ, val] of v) {
+            const typeNm = typ.capitalize()
+            if (!Type[`is${typeNm}`](val)) {throw new TypeError(`初期値の値が指定した型と一致しません: ${nm}:${val} actual:${Type.getName(val)}, expected:${typeNm}`)}
+            mv.push([nm, val])
         }
-        if (Type.isFn(onValidate)) { opts = {onValidate:onValidate, ...opts} }
-        super(v, opts, insOpts, 'clear,delete,set,entries,forEach,get,has,keys,values'.split(','))
+        opts.onValidate = (target, name, args, o)=>{
+            /*
+            if ('add'===name) {
+                if (this.#isTriple(args)) {
+                    v.push([...args])
+                    super.set(args[0], args[2])
+                }
+            }
+            else if ('set'===name) {
+            */
+            if ('set'===name) {
+                const matches = v.filter(([nm,typ,val])=>nm===args[0])
+                if (1===matches.length) {
+                    const [nm,typ,val] = matches[0]
+                    console.log(name, args, nm,typ,val, Type[`is${typ.capitalize()}`](args[1]))
+                    return Type[`is${typ.capitalize()}`](args[1])
+                } else { // 新規追加
+                }
+            }
+            return true
+        }
+        //opts.onInvalid = (target, key, value, n, o)=>{throw new TypeError(`引数の型が指定された型と一致しません: actual:${Type.getName(n)} expected:${Type.getName(o)}`)}
+        //opts.onInvalid = (target, name, args, o)=>{throw new TypeError(`引数の型が指定された型と一致しません: actual:${Type.getName(args[1])} expected:${Type.getName(v.filter(a=>a[0]===args[0])[0][0])}`)}
+        opts.onInvalid = (target, name, args, o)=>{throw new TypeError(`引数の型が指定された型と一致しません: actual:${Type.getName(args[1])} expected:${v.filter(a=>a[0]===args[0])[0][1].capitalize()}`)}
+        //super(mv, opts, insOpts, 'clear,delete,set,entries,forEach,get,has,keys,values,_initValue,add'.split(','))
+        super(mv, opts, insOpts, 'clear,delete,set,entries,forEach,get,has,keys,values,_initValue'.split(','))
+        this._initValue = v
+    }
+    //#isTriple(args) { return 3===args.length && Type.isStr(args[0]) && Type.isStr(args[1]) && `is${args[1].capitalize()}` in Type }
+    add(name, type, value) {
+        const args = [name, type, value]
+        if (this.#isTriple(args)) {
+            this._initValue.push(args)
+            //super.set(name, value)
+            this.set(name, value)
+        }
+    }
+    /*
+    */
+    #isTriple(args) {
+        if (3!==args.length) { throw new TypeError(`引数は[key,typeName,value]であるべきです。`) }
+        if (!Type.isStr(args[0])) {throw new TypeError(`引数[key,typeName,value]のkeyは文字列型であるべきです。`)}
+        if (!Type.isStr(args[1])) {throw new TypeError(`引数[key,typeName,value]のtypeNameは文字列型であるべきです。`)}
+        const typeNm = args[1].capitalize()
+        if (!(`is${typeNm}` in Type)) {throw new TypeError(`引数[key,typeName,value]のvalueはtypeNameで指定した型であるべきです: ${Type.getName(args[2])} expected:${typeNm}`)}
+        return true
     }
 }
 window.valk = Object.deepFreeze({
@@ -393,6 +433,7 @@ window.valk = Object.deepFreeze({
     someChanged:(...args)=>SomeChanged.of(...args),
     //typed:(...args)=>TypedAry.of(...args),
     typed:(...args)=>ifel(
+//        Type.isAry(args[0]) && 0===args[0].length, ()=>{throw new TypeError(`aaaaaaaaaaaa`)},
         TypedMap.isInitValue(args[0]), ()=>TypedMap.of(...args),
         Type.isAry(args[0]), ()=>TypedAry.of(...args), 
         Type.isIns(args[0], Set), ()=>TypedSet.of(...args),
@@ -407,6 +448,11 @@ window.valk = Object.deepFreeze({
         FixSet: FixSet,
         FixMap: FixMap,
         Counter: Counter,
+        TypedVal: TypedVal,
+        TypedAry: TypedAry,
+        TypedSet: TypedSet,
+        TypedMap: TypedMap,
+//        TypedObj: TypedObj,
     },
     errors: {
         FixError: FixError,
