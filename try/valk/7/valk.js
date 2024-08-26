@@ -400,7 +400,7 @@ class TypedMap extends hook.types.HookableContainer(Map) {
     }
 }
 class TypedObj extends hook.types.obj { 
-    static of(v, opts={}, insOpts={}) { return new TypedMap(v, opts, insOpts) }
+    static of(v, opts={}, insOpts={}) { return new TypedObj(v, opts, insOpts) }
 //    static isInitValue(v) { return (Type.isAry(v) && 0<v.length && v.every(t=>Type.isAry(t) && 3===t.length && Type.isStr(t[0]) && Type.isStr(t[1]) && `is${t[1].capitalize()}` in Type)) } // v:[[key, typeName, value], ...]
     static isInitValue(v) { return Type.isObj(v) && Object.entries(v).every(([K,V])=>Type.isAry(V) && 2===V.length && `is${V[0].capitalize()}` in Type)} // v:{k:[type,value], ...}
     constructor(v, opts={}, insOpts={}) {
@@ -418,9 +418,15 @@ class TypedObj extends hook.types.obj {
 //            mv.push([nm, val])
         }
         opts.onValidate = (target, name, args, o)=>{
-            if (name in target) {
-                const [typeNm, value] = ...v[name]
+            if (name in target) { // 変更
+                const [typeNm, value] = [v[name][0], v[name][1]]
                 return Type[`is${typeNm.capitalize()}`](value)
+            } else { // 新規追加
+                if (this.#isDouble(args)) {
+                    const [typeNm, value] = [args[name][0], args[name][1]]
+                    target[key] = value
+                    v[key] = args
+                }
             }
             /*
             if ('set'===name) {
@@ -435,15 +441,25 @@ class TypedObj extends hook.types.obj {
             return true
         }
         opts.onInvalid = (target, name, args, o)=>{throw new TypeError(`引数の型が指定された型と一致しません: actual:${Type.getName(args[1])} expected:${v.filter(a=>a[0]===args[0])[0][1].capitalize()}`)}
-        super(mv, opts, insOpts, 'clear,delete,set,entries,forEach,get,has,keys,values,_initValue'.split(','))
-        this._initValue = v
+        //super(mv, opts, insOpts, 'clear,delete,set,entries,forEach,get,has,keys,values,_initValue'.split(','))
+        super(o, opts, insOpts, 'clear,delete,set,entries,forEach,get,has,keys,values,_initValue'.split(','))
+//        this._initValue = v
     }
+    /*
     add(name, type, value) {
         const args = [name, type, value]
         if (this.#isTriple(args)) {
             this._initValue.push(args)
             this.set(name, value)
         }
+    }
+    */
+    #isDouble(args) {
+        if (2!==args.length) { throw new TypeError(`引数は[typeName,value]であるべきです。`) }
+        if (!Type.isStr(args[0])) {throw new TypeError(`引数[typeName,value]のtypeNameは文字列型であるべきです。`)}
+        const typeNm = args[0].capitalize()
+        if (!(`is${typeNm}` in Type)) {throw new TypeError(`引数[typeName,value]のvalueはtypeNameで指定した型であるべきです: actual:${Type.getName(args[0])} expected:${typeNm}`)}
+        return true
     }
     #isTriple(args) {
         if (3!==args.length) { throw new TypeError(`引数は[key,typeName,value]であるべきです。`) }
@@ -470,6 +486,7 @@ window.valk = Object.deepFreeze({
     typed:(...args)=>ifel(
 //        Type.isAry(args[0]) && 0===args[0].length, ()=>{throw new TypeError(`aaaaaaaaaaaa`)},
         TypedMap.isInitValue(args[0]), ()=>TypedMap.of(...args),
+        Type.isObj(args[0]), ()=>TypedObj.of(...args),
         Type.isAry(args[0]), ()=>TypedAry.of(...args), 
         Type.isIns(args[0], Set), ()=>TypedSet.of(...args),
         ()=>TypedVal.of(...args)),
@@ -487,6 +504,7 @@ window.valk = Object.deepFreeze({
         TypedAry: TypedAry,
         TypedSet: TypedSet,
         TypedMap: TypedMap,
+        TypedObj: TypedObj,
 //        TypedObj: TypedObj,
     },
     errors: {

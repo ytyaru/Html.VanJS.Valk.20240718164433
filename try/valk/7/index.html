@@ -1473,6 +1473,30 @@ window.addEventListener('load', async(e)=>{
     })
 
     // valk.typed Object
+    a.t(()=>{
+        const o = new valk.types.TypedObj({name:['str','Yamada'],age:['int',0]})
+        console.log(o)
+        //console.log(o instanceof valk.types.TypedObj, o instanceof Object, Type.isObj(o), 2===Object.keys(o).length, 'Yamada'===o.name, 0===o.age)
+        //console.log(o instanceof valk.types.TypedObj, o instanceof Object, 2===Object.keys(o).length, 'Yamada'===o.name, 0===o.age)
+        console.log(o instanceof Object, 2===Object.keys(o).length, 'Yamada'===o.name, 0===o.age)
+        //return o instanceof valk.types.TypedObj && o instanceof Object && Type.isObj(o) && 2===Object.keys(o).length && 'Yamada'===o.name && 0===o.age
+        return o instanceof Object && 2===Object.keys(o).length && 'Yamada'===o.name && 0===o.age
+    })
+    a.t(()=>{
+        console.log(valk.types.TypedMap.isInitValue({name:['str','Yamada'],age:['int',0]}))
+        const o = valk.typed({name:['str','Yamada'],age:['int',0]})
+        return o instanceof Object && 2===Object.keys(o).length && 'Yamada'===o.name && 0===o.age
+    })
+    a.e(TypeError, `第一引数vは{key:[typeName,value],...}であるべきです。`, ()=>new valk.types.TypedObj([['name','str','Yamada'],['age','int']]))
+    a.e(TypeError, `第一引数vは{key:[typeName,value],...}であるべきです。`, ()=>new valk.types.TypedObj({name:['str','Yamada'],age:['int']}))
+    a.e(TypeError, `第一引数vは{key:[typeName,value],...}であるべきです。`, ()=>new valk.types.TypedObj({name:['str','Yamada'],age:['X',0]}))
+    a.e(TypeError, `初期値の値が指定した型と一致しません: Int:X actual:String, expected:Int`, ()=>new valk.types.TypedObj({name:['str','Yamada'],age:['int','X']}))
+    a.e(TypeError, `初期値の値が指定した型と一致しません: Int:X actual:String, expected:Int`, ()=>{
+        const o = new valk.types.TypedObj({name:['str','Yamada'],age:['int',0]})
+        //o.age = 'X'
+        o.X = 'X'
+    })
+
 
 
 
