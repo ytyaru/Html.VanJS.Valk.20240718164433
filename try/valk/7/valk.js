@@ -461,14 +461,6 @@ class TypedObj extends hook.types.obj {
         if (!(`is${typeNm}` in Type)) {throw new TypeError(`引数[typeName,value]のvalueはtypeNameで指定した型であるべきです: actual:${Type.getName(args[0])} expected:${typeNm}`)}
         return true
     }
-    #isTriple(args) {
-        if (3!==args.length) { throw new TypeError(`引数は[key,typeName,value]であるべきです。`) }
-        if (!Type.isStr(args[0])) {throw new TypeError(`引数[key,typeName,value]のkeyは文字列型であるべきです。`)}
-        if (!Type.isStr(args[1])) {throw new TypeError(`引数[key,typeName,value]のtypeNameは文字列型であるべきです。`)}
-        const typeNm = args[1].capitalize()
-        if (!(`is${typeNm}` in Type)) {throw new TypeError(`引数[key,typeName,value]のvalueはtypeNameで指定した型であるべきです: ${Type.getName(args[2])} expected:${typeNm}`)}
-        return true
-    }
 }
 window.valk = Object.deepFreeze({
     fix:(v, options={}, insOpts={})=>ifel(v instanceof Array, ()=>FixAry.of(v,options,insOpts),
@@ -482,9 +474,7 @@ window.valk = Object.deepFreeze({
     range:(...args)=>Range.of(...args),
     some:(...args)=>Some.of(...args),
     someChanged:(...args)=>SomeChanged.of(...args),
-    //typed:(...args)=>TypedAry.of(...args),
     typed:(...args)=>ifel(
-//        Type.isAry(args[0]) && 0===args[0].length, ()=>{throw new TypeError(`aaaaaaaaaaaa`)},
         TypedMap.isInitValue(args[0]), ()=>TypedMap.of(...args),
         Type.isObj(args[0]), ()=>TypedObj.of(...args),
         Type.isAry(args[0]), ()=>TypedAry.of(...args), 
@@ -505,7 +495,6 @@ window.valk = Object.deepFreeze({
         TypedSet: TypedSet,
         TypedMap: TypedMap,
         TypedObj: TypedObj,
-//        TypedObj: TypedObj,
     },
     errors: {
         FixError: FixError,
