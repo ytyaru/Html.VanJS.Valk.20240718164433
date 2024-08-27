@@ -1491,11 +1491,38 @@ window.addEventListener('load', async(e)=>{
     a.e(TypeError, `第一引数vは{key:[typeName,value],...}であるべきです。`, ()=>new valk.types.TypedObj({name:['str','Yamada'],age:['int']}))
     a.e(TypeError, `第一引数vは{key:[typeName,value],...}であるべきです。`, ()=>new valk.types.TypedObj({name:['str','Yamada'],age:['X',0]}))
     a.e(TypeError, `初期値の値が指定した型と一致しません: Int:X actual:String, expected:Int`, ()=>new valk.types.TypedObj({name:['str','Yamada'],age:['int','X']}))
-    a.e(TypeError, `初期値の値が指定した型と一致しません: Int:X actual:String, expected:Int`, ()=>{
+    a.t(()=>{
+        const o = valk.typed({name:['str','Yamada'],age:['int',0]})
+        o.age = 1
+        console.log(o.age)
+        console.log(o instanceof Object, 2===Object.keys(o).length, 'Yamada'===o.name, 1===o.age)
+        return o instanceof Object && 2===Object.keys(o).length && 'Yamada'===o.name && 1===o.age
+    })
+    a.e(TypeError, `引数の型が指定された型と一致しません: actual:String expected:Int`, ()=>{
         const o = new valk.types.TypedObj({name:['str','Yamada'],age:['int',0]})
-        //o.age = 'X'
+        o.age = 'X'
+    })
+    a.e(TypeError, `未定義プロパティへの参照禁止: X`, ()=>{
+        const o = new valk.types.TypedObj({name:['str','Yamada'],age:['int',0]})
+        o.X
+    })
+    a.e(TypeError, `未定義プロパティへの参照禁止: X`, ()=>{
+        const o = new valk.types.TypedObj({name:['str','Yamada'],age:['int',0]})
         o.X = 'X'
     })
+    a.e(TypeError, `未定義プロパティへの参照禁止: weight`, ()=>{
+        const o = new valk.types.TypedObj({name:['str','Yamada'],age:['int',0]})
+        o.weight = ['float', 60.5]
+    })
+    a.t(()=>{
+        const o = new valk.types.TypedObj({name:['str','Yamada'],age:['int',0]}, {getUndefined: true})
+        o.weight = ['float', 60.5]
+        console.log(o)
+        return o instanceof Object && 3===Object.keys(o).length && 'Yamada'===o.name && 0===o.age && 60.5===o.weight
+    })
+
+
+
 
 
 

@@ -418,15 +418,14 @@ class TypedObj extends hook.types.obj {
 //            mv.push([nm, val])
         }
         opts.onValidate = (target, name, args, o)=>{
+            console.log(name, args)
             if (name in target) { // 変更
                 const [typeNm, value] = [v[name][0], v[name][1]]
-                return Type[`is${typeNm.capitalize()}`](value)
+                console.log(typeNm, value, args[0])
+                //return Type[`is${typeNm.capitalize()}`](value)
+                //return Type[`is${typeNm.capitalize()}`](args[0])
+                return Type[`is${typeNm.capitalize()}`](args)
             } else { // 新規追加
-                if (this.#isDouble(args)) {
-                    const [typeNm, value] = [args[name][0], args[name][1]]
-                    target[key] = value
-                    v[key] = args
-                }
             }
             /*
             if ('set'===name) {
@@ -440,9 +439,42 @@ class TypedObj extends hook.types.obj {
             */
             return true
         }
-        opts.onInvalid = (target, name, args, o)=>{throw new TypeError(`引数の型が指定された型と一致しません: actual:${Type.getName(args[1])} expected:${v.filter(a=>a[0]===args[0])[0][1].capitalize()}`)}
+        //opts.onInvalid = (target, name, args, o)=>{throw new TypeError(`引数の型が指定された型と一致しません。`)}
+        opts.onInvalid = (target, name, args, o)=>{throw new TypeError(`引数の型が指定された型と一致しません: actual:${Type.getName(args[0])} expected:${v[name][0].capitalize()}`)}
+        opts.onSet = (target, name, args, receiver, o)=>{
+            if (name in target) { // 変更
+                target[name] = args
+            } else { // 新規追加
+                console.log('新規追加**********', name, args)
+                if (this.#isDouble(args)) {
+                    //console.log()
+                    //const [typeNm, value] = [args[name][0], args[name][1]]
+                    const [typeNm, value] = [args[0], args[1]]
+                    target[name] = value
+                    v[name] = args
+                    console.log(target, name, value)
+                }
+            }
+            //return o
+            return true
+        }
+        //opts.onInvalid = (target, name, args, o)=>{console.log(v);throw new TypeError(`引数の型が指定された型と一致しません: actual:${Type.getName(args[1])} expected:${v.filter(a=>a[0]===args[0])[0][1].capitalize()}`)}
         //super(mv, opts, insOpts, 'clear,delete,set,entries,forEach,get,has,keys,values,_initValue'.split(','))
-        super(o, opts, insOpts, 'clear,delete,set,entries,forEach,get,has,keys,values,_initValue'.split(','))
+        //super(o, opts, insOpts, 'clear,delete,set,entries,forEach,get,has,keys,values,_initValue'.split(','))
+        super(o, opts, {
+            getUndefined: true,
+            setUndefined: true,
+            /*
+            onGetUndefined:(target, key, receiver)=>{
+                if (key === Symbol.iterator) { return Object.entries(this) } // for of
+                if (this._options.getUndefined) { return target[key] }
+                else { throw new TypeError(`未定義プロパティへの参照禁止: ${key}`) }
+            },
+            onSetDefined: (target, key, value, receiver)=>super.set(target, key, value, receiver),
+            */
+            ...insOpts}, 
+            'clear,delete,set,entries,forEach,get,has,keys,values,_initValue'.split(','))
+
 //        this._initValue = v
     }
     /*
@@ -490,6 +522,9 @@ window.valk = Object.deepFreeze({
         FixSet: FixSet,
         FixMap: FixMap,
         Counter: Counter,
+        Range: Range,
+        Some: Some,
+        SomeChanged: SomeChanged,
         TypedVal: TypedVal,
         TypedAry: TypedAry,
         TypedSet: TypedSet,

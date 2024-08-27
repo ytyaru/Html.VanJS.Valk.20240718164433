@@ -135,7 +135,11 @@ class HookObj {
             else if (Type.isFn(target[key])) { return target[key].bind(target) } // method, constructor?
             else if (key === Symbol.iterator) { return target[Symbol.iterator].bind(target) } // for of
             return target[key] // field
-        } else {throw new TypeError(`未定義プロパティへの参照禁止: ${key}`)}
+        //} else {throw new TypeError(`未定義プロパティへの参照禁止: ${key}`)}
+        } else {
+            if (this._options.getUndefined) { return target[key] }
+            else {throw new TypeError(`未定義プロパティへの参照禁止: ${key}`)}
+        }
     }
     set(target, key, value, receiver) {
         if (key in target) {if (!this._insOpts.setDefined) {throw new TypeError(`定義済プロパティへの代入禁止: ${key}`)}}
